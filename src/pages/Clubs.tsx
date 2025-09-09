@@ -1,13 +1,34 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building, Users, Calendar, Plus, CheckCircle, Clock } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { Building, Users, Calendar, Plus, CheckCircle, Clock, Loader2 } from 'lucide-react';
+import CreateClubDialog from '@/components/Clubs/CreateClubDialog';
+import JoinRequestsDialog from '@/components/Clubs/JoinRequestsDialog';
+import CreateEventDialog from '@/components/Events/CreateEventDialog';
+
+interface Club {
+  id: string;
+  name: string;
+  description: string;
+  approved: boolean;
+  member_count?: number;
+  event_count?: number;
+  user_membership?: any;
+  pending_requests?: number;
+}
 
 const Clubs = () => {
   const { user, profile, loading } = useAuth();
+  const { toast } = useToast();
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [loadingClubs, setLoadingClubs] = useState(true);
+  const [joinRequestLoading, setJoinRequestLoading] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -24,49 +45,126 @@ const Clubs = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Mock clubs data - will be replaced with real Supabase queries
-  const clubs = [
-    {
-      id: '1',
-      name: 'Computer Science Club',
-      description: 'Promoting coding culture and technical innovation among students',
-      approved: true,
-      memberCount: 45,
-      eventCount: 8,
-      isAdmin: profile?.role === 'club_admin',
-      isMember: true,
-    },
-    {
-      id: '2',
-      name: 'Cultural Committee',
-      description: 'Organizing cultural events and celebrating diversity',
-      approved: true,
-      memberCount: 67,
-      eventCount: 12,
-      isAdmin: false,
-      isMember: false,
-    },
-    {
-      id: '3',
-      name: 'Robotics Club',
-      description: 'Building robots and exploring automation technologies',
-      approved: true,
-      memberCount: 32,
-      eventCount: 6,
-      isAdmin: false,
-      isMember: true,
-    },
-    {
-      id: '4',
-      name: 'Photography Club',
-      description: 'Capturing moments and developing photography skills',
-      approved: false,
-      memberCount: 0,
-      eventCount: 0,
-      isAdmin: false,
-      isMember: false,
-    },
-  ];
+  const fetchClubs = async () => {
+    setLoadingClubs(true);
+    try {
+      let query = supabase
+        .from('clubs')
+        .select(`
+          id,
+          name,
+          description,
+          approved,
+          created_by,
+          club_members!inner(count),
+          events(count)
+        `);
+
+      // College admins see all clubs, others see only approved ones
+      if (profile?.role !== 'college_admin') {
+        query = query.eq('approved', true);
+      }
+
+      const { data: clubsData, error } = await query;
+
+      if (error) {
+        console.error('Error fetching clubs:', error);
+        return;
+      }
+
+      // Get user's membership status for each club
+      const { data: memberships } = await supabase
+        .from('club_members')
+        .select('club_id, role')
+        .eq('profile_id', user.id);
+
+      // Get pending join requests count for club admins
+      const membershipMap = new Map(memberships?.map(m => [m.club_id, m]) || []);
+      
+      const enrichedClubs = await Promise.all(clubsData?.map(async (club: any) => {
+        const membership = membershipMap.get(club.id);
+        let pendingRequests = 0;
+        
+        // Get pending requests count for club admins
+        if (membership?.role === 'admin') {
+          const { count } = await supabase
+            .from('join_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('club_id', club.id)
+            .eq('status', 'pending');
+          pendingRequests = count || 0;
+        }
+
+        return {
+          id: club.id,
+          name: club.name,
+          description: club.description,
+          approved: club.approved,
+          member_count: club.club_members?.[0]?.count || 0,
+          event_count: club.events?.[0]?.count || 0,
+          user_membership: membership,
+          pending_requests: pendingRequests,
+        };
+      }) || []);
+
+      setClubs(enrichedClubs);
+    } catch (error) {
+      console.error('Error in fetchClubs:', error);
+    } finally {
+      setLoadingClubs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && profile) {
+      fetchClubs();
+    }
+  }, [user, profile]);
+
+  const handleJoinRequest = async (clubId: string) => {
+    setJoinRequestLoading(clubId);
+    try {
+      const { error } = await supabase
+        .from('join_requests')
+        .insert({
+          club_id: clubId,
+          profile_id: user.id,
+        });
+
+      if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+          toast({
+            title: "Request already sent",
+            description: "You have already sent a join request for this club.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error sending request",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      toast({
+        title: "Join request sent",
+        description: "Your request has been sent to the club administrators.",
+      });
+
+      fetchClubs();
+    } catch (error) {
+      console.error('Error sending join request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send join request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setJoinRequestLoading(null);
+    }
+  };
 
   const approvedClubs = clubs.filter(club => club.approved);
   const pendingClubs = clubs.filter(club => !club.approved);
@@ -82,21 +180,27 @@ const Clubs = () => {
             </p>
           </div>
           
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Club
-          </Button>
+          <CreateClubDialog onClubCreated={fetchClubs} />
         </div>
 
+        {/* Loading State */}
+        {loadingClubs && (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="ml-2 text-muted-foreground">Loading clubs...</p>
+          </div>
+        )}
+
         {/* Approved Clubs */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-            Active Clubs
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {approvedClubs.map((club) => (
+        {!loadingClubs && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+              Active Clubs
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {approvedClubs.map((club) => (
               <Card key={club.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -109,7 +213,7 @@ const Clubs = () => {
                         {club.description}
                       </CardDescription>
                     </div>
-                    {club.isAdmin && (
+                    {club.user_membership?.role === 'admin' && (
                       <Badge variant="secondary">Admin</Badge>
                     )}
                   </div>
@@ -119,28 +223,47 @@ const Clubs = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center text-muted-foreground">
                       <Users className="h-4 w-4 mr-2" />
-                      {club.memberCount} members
+                      {club.member_count} members
                     </div>
                     <div className="flex items-center text-muted-foreground">
                       <Calendar className="h-4 w-4 mr-2" />
-                      {club.eventCount} events
+                      {club.event_count} events
                     </div>
                   </div>
                   
                   <div className="flex gap-2 pt-2">
-                    {club.isMember ? (
+                    {club.user_membership?.role === 'admin' ? (
+                      <>
+                        <CreateEventDialog clubId={club.id} onEventCreated={fetchClubs} />
+                        <JoinRequestsDialog 
+                          clubId={club.id}
+                          clubName={club.name}
+                          pendingCount={club.pending_requests || 0}
+                          onRequestHandled={fetchClubs}
+                        />
+                      </>
+                    ) : club.user_membership ? (
                       <>
                         <Button variant="outline" size="sm" className="flex-1">
                           View Details
                         </Button>
                         <Button variant="destructive" size="sm">
-                          Leave
+                          Leave Club
                         </Button>
                       </>
                     ) : (
                       <>
-                        <Button className="flex-1" size="sm">
-                          Join Club
+                        <Button 
+                          className="flex-1" 
+                          size="sm"
+                          onClick={() => handleJoinRequest(club.id)}
+                          disabled={joinRequestLoading === club.id}
+                        >
+                          {joinRequestLoading === club.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            'Request to Join'
+                          )}
                         </Button>
                         <Button variant="outline" size="sm">
                           Details
@@ -150,9 +273,10 @@ const Clubs = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Pending Clubs (visible to college admins) */}
         {profile?.role === 'college_admin' && pendingClubs.length > 0 && (
@@ -196,7 +320,7 @@ const Clubs = () => {
         )}
 
         {/* Empty State */}
-        {approvedClubs.length === 0 && (
+        {!loadingClubs && approvedClubs.length === 0 && (
           <Card className="text-center py-12">
             <CardContent>
               <Building className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

@@ -183,6 +183,39 @@ export type Database = {
           },
         ]
       }
+      join_requests: {
+        Row: {
+          club_id: string
+          id: string
+          message: string | null
+          profile_id: string
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          club_id: string
+          id?: string
+          message?: string | null
+          profile_id: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          club_id?: string
+          id?: string
+          message?: string | null
+          profile_id?: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           branch: string

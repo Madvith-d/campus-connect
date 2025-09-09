@@ -1,14 +1,41 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Users, Building, Calendar, Settings, AlertCircle } from 'lucide-react';
+import { Shield, Users, Building, Calendar, Settings, AlertCircle, Check, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useToast } from '@/components/ui/use-toast';
+import UserRoleDialog from '@/components/Admin/UserRoleDialog';
+
+interface PendingClub {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  profiles: {
+    name: string;
+    usn: string;
+  };
+}
 
 const Admin = () => {
   const { user, profile, loading } = useAuth();
+  const { toast } = useToast();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    pendingUsers: 0,
+    totalClubs: 0,
+    pendingClubs: 0,
+    activeEvents: 0,
+    totalAttendance: 0,
+  });
+  const [pendingClubs, setPendingClubs] = useState<PendingClub[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -41,70 +68,173 @@ const Admin = () => {
     );
   }
 
-  // Mock admin data - will be replaced with real Supabase queries
-  const stats = {
-    totalUsers: 1234,
-    pendingUsers: 12,
-    totalClubs: 28,
-    pendingClubs: 3,
-    activeEvents: 15,
-    totalAttendance: 8945,
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    try {
+      // Fetch user counts
+      const { count: totalUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch club counts
+      const { count: totalClubs } = await supabase
+        .from('clubs')
+        .select('*', { count: 'exact', head: true })
+        .eq('approved', true);
+
+      const { count: pendingClubsCount } = await supabase
+        .from('clubs')
+        .select('*', { count: 'exact', head: true })
+        .eq('approved', false);
+
+      // Fetch active events
+      const { count: activeEvents } = await supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .gte('end_time', new Date().toISOString());
+
+      // Fetch total attendance
+      const { count: totalAttendance } = await supabase
+        .from('attendance_logs')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch pending clubs details
+      const { data: pendingClubsData } = await supabase
+        .from('clubs')
+        .select(`
+          id,
+          name,
+          description,
+          created_at,
+          profiles!clubs_created_by_fkey (
+            name,
+            usn
+          )
+        `)
+        .eq('approved', false)
+        .order('created_at', { ascending: false });
+
+      setStats({
+        totalUsers: totalUsers || 0,
+        pendingUsers: 0, // Not tracking pending users in this system
+        totalClubs: totalClubs || 0,
+        pendingClubs: pendingClubsCount || 0,
+        activeEvents: activeEvents || 0,
+        totalAttendance: totalAttendance || 0,
+      });
+
+      setPendingClubs(pendingClubsData || []);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoadingStats(false);
+    }
   };
 
-  const recentActivities = [
-    {
-      id: '1',
-      type: 'club_request',
-      description: 'New club registration: Photography Club',
-      timestamp: '2 hours ago',
-      status: 'pending',
-    },
-    {
-      id: '2',
-      type: 'user_registration',
-      description: '5 new student registrations',
-      timestamp: '4 hours ago',
-      status: 'completed',
-    },
-    {
-      id: '3',
-      type: 'event_creation',
-      description: 'Tech Symposium 2024 created by Computer Science Club',
-      timestamp: '1 day ago',
-      status: 'completed',
-    },
-  ];
+  useEffect(() => {
+    if (profile?.role === 'college_admin') {
+      fetchStats();
+    }
+  }, [profile]);
 
-  const quickActions = [
-    {
-      title: 'Manage Users',
-      description: 'View and manage all user accounts',
-      icon: Users,
-      href: '/admin/users',
-      badge: stats.pendingUsers > 0 ? `${stats.pendingUsers} pending` : null,
-    },
-    {
-      title: 'Manage Clubs',
-      description: 'Approve and manage college clubs',
-      icon: Building,
-      href: '/admin/clubs',
-      badge: stats.pendingClubs > 0 ? `${stats.pendingClubs} pending` : null,
-    },
-    {
-      title: 'Event Oversight',
-      description: 'Monitor all events and activities',
-      icon: Calendar,
-      href: '/admin/events',
-      badge: `${stats.activeEvents} active`,
-    },
-    {
-      title: 'System Settings',
-      description: 'Configure system-wide settings',
-      icon: Settings,
-      href: '/admin/settings',
-      badge: null,
-    },
-  ];
+  const handleClubApproval = async (clubId: string, approved: boolean) => {
+    setApprovalLoading(clubId);
+    try {
+      const { error } = await supabase
+        .from('clubs')
+        .update({ approved })
+        .eq('id', clubId);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: approved ? "Club approved" : "Club rejected",
+        description: approved 
+          ? "The club has been approved and is now active."
+          : "The club request has been rejected.",
+      });
+
+      fetchStats();
+    } catch (error) {
+      console.error('Error handling club approval:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process club request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setApprovalLoading(null);
+    }
+  };
+
+        {/* Pending Club Approvals */}
+        {!loadingStats && pendingClubs.length > 0 && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Building className="h-5 w-5 text-orange-500 mr-2" />
+              Pending Club Approvals ({pendingClubs.length})
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pendingClubs.map((club) => (
+                <Card key={club.id} className="border-orange-200 bg-orange-50/50">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{club.name}</CardTitle>
+                    <CardDescription className="mt-1">
+                      {club.description}
+                    </CardDescription>
+                    <p className="text-xs text-muted-foreground">
+                      Created by: {club.profiles.name} ({club.profiles.usn})
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Requested: {new Date(club.created_at).toLocaleDateString()}
+                    </p>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    <Badge variant="outline" className="w-fit">
+                      Pending Approval
+                    </Badge>
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleClubApproval(club.id, true)}
+                        disabled={approvalLoading === club.id}
+                      >
+                        {approvalLoading === club.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Approve
+                          </>
+                        )}
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleClubApproval(club.id, false)}
+                        disabled={approvalLoading === club.id}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Reject
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
   return (
     <DashboardLayout>
@@ -119,10 +249,18 @@ const Admin = () => {
               College administration and management
             </p>
           </div>
+          
+          <UserRoleDialog />
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loadingStats ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="ml-2 text-muted-foreground">Loading statistics...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -165,64 +303,9 @@ const Admin = () => {
               </p>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Link key={action.title} to={action.href}>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Icon className="h-6 w-6 text-primary" />
-                          <CardTitle className="text-lg">{action.title}</CardTitle>
-                        </div>
-                        {action.badge && (
-                          <Badge variant="secondary" className="text-xs">
-                            {action.badge}
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription>{action.description}</CardDescription>
-                    </CardHeader>
-                  </Card>
-                </Link>
-              );
-            })}
           </div>
-        </div>
+        )}
 
-        {/* Recent Activities */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Recent Activities</h2>
-          <Card>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        activity.status === 'pending' ? 'bg-orange-500' : 'bg-green-500'
-                      }`} />
-                      <div>
-                        <p className="text-sm font-medium">{activity.description}</p>
-                        <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
-                      </div>
-                    </div>
-                    <Badge variant={activity.status === 'pending' ? 'secondary' : 'outline'}>
-                      {activity.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </DashboardLayout>
   );
