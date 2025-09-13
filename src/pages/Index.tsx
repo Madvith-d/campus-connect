@@ -3,9 +3,36 @@ import { Navigate } from 'react-router-dom';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Users, Building, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DashboardStats {
+  totalEvents: number;
+  totalStudents: number;
+  totalClubs: number;
+  attendanceRate: number;
+}
+
+interface RecentEvent {
+  id: string;
+  title: string;
+  start_time: string;
+  clubs: {
+    name: string;
+  };
+}
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalEvents: 0,
+    totalStudents: 0,
+    totalClubs: 0,
+    attendanceRate: 0,
+  });
+  const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
+  const [userRegistrations, setUserRegistrations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   if (loading) {
     return (
@@ -20,6 +47,89 @@ const Index = () => {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch statistics
+      const [eventsRes, profilesRes, clubsRes] = await Promise.all([
+        supabase.from('events').select('id', { count: 'exact' }),
+        supabase.from('profiles').select('user_id', { count: 'exact' }),
+        supabase.from('clubs').select('id', { count: 'exact' }).eq('approved', true),
+      ]);
+
+      // Fetch recent events
+      const { data: events } = await supabase
+        .from('events')
+        .select('id, title, start_time, clubs(name)')
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(3);
+
+      // Fetch user registrations if student
+      let registrations = [];
+      if (profile?.role === 'student') {
+        const { data } = await supabase
+          .from('registrations')
+          .select(`
+            id,
+            events(
+              title,
+              start_time,
+              is_team_event
+            ),
+            teams(name)
+          `)
+          .eq('profile_id', profile.user_id)
+          .order('registered_at', { ascending: false })
+          .limit(3);
+        
+        registrations = data || [];
+      }
+
+      setStats({
+        totalEvents: eventsRes.count || 0,
+        totalStudents: profilesRes.count || 0,
+        totalClubs: clubsRes.count || 0,
+        attendanceRate: 85, // This would need attendance logs calculation
+      });
+
+      setRecentEvents(events || []);
+      setUserRegistrations(registrations);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && profile) {
+      fetchDashboardData();
+    }
+  }, [user, profile]);
+
+  const formatEventTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = date.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays <= 7) return `In ${diffDays} days`;
+    return date.toLocaleDateString();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -40,9 +150,9 @@ const Index = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">{stats.totalEvents}</div>
               <p className="text-xs text-muted-foreground">
-                +2 from last month
+                Upcoming and ongoing events
               </p>
             </CardContent>
           </Card>
@@ -53,9 +163,9 @@ const Index = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,234</div>
+              <div className="text-2xl font-bold">{stats.totalStudents}</div>
               <p className="text-xs text-muted-foreground">
-                +180 from last month
+                Total registered students
               </p>
             </CardContent>
           </Card>
@@ -66,9 +176,9 @@ const Index = () => {
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">28</div>
+              <div className="text-2xl font-bold">{stats.totalClubs}</div>
               <p className="text-xs text-muted-foreground">
-                +3 new this semester
+                Approved active clubs
               </p>
             </CardContent>
           </Card>
@@ -79,9 +189,9 @@ const Index = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">85%</div>
+              <div className="text-2xl font-bold">{stats.attendanceRate}%</div>
               <p className="text-xs text-muted-foreground">
-                +5% from last month
+                Average event attendance
               </p>
             </CardContent>
           </Card>
@@ -98,27 +208,24 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Tech Symposium 2024</p>
-                    <p className="text-xs text-muted-foreground">Computer Science Club • Tomorrow</p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-secondary rounded-full mr-3"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Cultural Night</p>
-                    <p className="text-xs text-muted-foreground">Cultural Committee • Next Week</p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-accent rounded-full mr-3"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Sports Fest</p>
-                    <p className="text-xs text-muted-foreground">Sports Club • In 2 weeks</p>
-                  </div>
-                </div>
+                {recentEvents.length > 0 ? (
+                  recentEvents.map((event, index) => (
+                    <div key={event.id} className="flex items-center">
+                      <div className={`w-2 h-2 rounded-full mr-3 ${
+                        index === 0 ? 'bg-primary' : 
+                        index === 1 ? 'bg-secondary' : 'bg-accent'
+                      }`}></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{event.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {event.clubs.name} • {formatEventTime(event.start_time)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No upcoming events</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -132,20 +239,31 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Hackathon 2024</p>
-                    <p className="text-xs text-muted-foreground">Team: CodeCrafters</p>
-                  </div>
-                  <div className="text-xs text-muted-foreground">Tomorrow</div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Workshop: AI & ML</p>
-                    <p className="text-xs text-muted-foreground">Individual</p>
-                  </div>
-                  <div className="text-xs text-muted-foreground">Next Week</div>
-                </div>
+                {userRegistrations.length > 0 ? (
+                  userRegistrations.map((registration: any) => (
+                    <div key={registration.id} className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{registration.events.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {registration.events.is_team_event ? 
+                            `Team: ${registration.teams?.name || 'No team'}` : 
+                            'Individual'
+                          }
+                        </p>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatEventTime(registration.events.start_time)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {profile?.role === 'student' ? 
+                      'No event registrations yet' : 
+                      'Register for events to see them here'
+                    }
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

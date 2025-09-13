@@ -5,9 +5,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, Users, Clock, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import CreateEventDialog from '@/components/Events/CreateEventDialog';
+import EventDetailsDialog from '@/components/Events/EventDetailsDialog';
+import TeamCreationDialog from '@/components/Events/TeamCreationDialog';
+
+interface Event {
+  id: string;
+  title: string;
+  description: string | null;
+  location: string;
+  start_time: string;
+  end_time: string;
+  capacity: number;
+  is_team_event: boolean;
+  club_id: string;
+  clubs: {
+    name: string;
+  };
+  registrations: Array<{
+    id: string;
+    profile_id: string;
+  }>;
+}
 
 const Events = () => {
   const { user, profile, loading } = useAuth();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   if (loading) {
     return (
@@ -24,45 +54,31 @@ const Events = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Mock events data - will be replaced with real Supabase queries
-  const events = [
-    {
-      id: '1',
-      title: 'Tech Symposium 2024',
-      description: 'Annual technical symposium featuring latest tech trends',
-      location: 'Main Auditorium',
-      start_time: '2024-09-15T09:00:00Z',
-      end_time: '2024-09-15T17:00:00Z',
-      capacity: 200,
-      is_team_event: false,
-      club_name: 'Computer Science Club',
-      registered: 150,
-    },
-    {
-      id: '2',
-      title: 'Hackathon 2024',
-      description: '24-hour coding marathon to solve real-world problems',
-      location: 'Computer Lab',
-      start_time: '2024-09-20T18:00:00Z',
-      end_time: '2024-09-21T18:00:00Z',
-      capacity: 100,
-      is_team_event: true,
-      club_name: 'Coding Club',
-      registered: 80,
-    },
-    {
-      id: '3',
-      title: 'Cultural Night',
-      description: 'Celebrate diversity through music, dance, and performances',
-      location: 'Open Ground',
-      start_time: '2024-09-25T19:00:00Z',
-      end_time: '2024-09-25T22:00:00Z',
-      capacity: 500,
-      is_team_event: false,
-      club_name: 'Cultural Committee',
-      registered: 320,
-    },
-  ];
+  const fetchEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          *,
+          clubs(name),
+          registrations(id, profile_id)
+        `)
+        .order('start_time', { ascending: true });
+
+      if (error) throw error;
+      setEvents(data || []);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchEvents();
+    }
+  }, [user]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -87,6 +103,39 @@ const Events = () => {
     return 'text-green-500';
   };
 
+  const handleEventCreated = () => {
+    fetchEvents();
+  };
+
+  const handleRegister = () => {
+    fetchEvents();
+  };
+
+  const isRegistered = (event: Event) => {
+    return event.registrations.some(reg => reg.profile_id === profile?.user_id);
+  };
+
+  const handleRegisterClick = (event: Event) => {
+    if (event.is_team_event) {
+      setSelectedEvent(event);
+      setIsTeamDialogOpen(true);
+    } else {
+      setSelectedEvent(event);
+      setIsDetailsDialogOpen(true);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading events...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -98,8 +147,8 @@ const Events = () => {
             </p>
           </div>
           
-          {profile?.role !== 'student' && (
-            <Button>
+          {profile?.role === 'club_admin' && (
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Event
             </Button>
@@ -114,7 +163,7 @@ const Events = () => {
                   <div className="flex-1">
                     <CardTitle className="text-lg">{event.title}</CardTitle>
                     <CardDescription className="mt-1">
-                      {event.club_name}
+                      {event.clubs.name}
                     </CardDescription>
                   </div>
                   <Badge variant={event.is_team_event ? 'secondary' : 'outline'}>
@@ -146,17 +195,34 @@ const Events = () => {
                   
                   <div className="flex items-center">
                     <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className={getAvailabilityColor(event.registered, event.capacity)}>
-                      {event.registered}/{event.capacity} registered
+                    <span className={getAvailabilityColor(event.registrations.length, event.capacity)}>
+                      {event.registrations.length}/{event.capacity} registered
                     </span>
                   </div>
                 </div>
                 
                 <div className="flex gap-2 pt-2">
-                  <Button className="flex-1" size="sm">
-                    Register
-                  </Button>
-                  <Button variant="outline" size="sm">
+                  {isRegistered(event) ? (
+                    <Button className="flex-1" size="sm" disabled>
+                      Registered
+                    </Button>
+                  ) : (
+                    <Button 
+                      className="flex-1" 
+                      size="sm"
+                      onClick={() => handleRegisterClick(event)}
+                    >
+                      Register
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedEvent(event);
+                      setIsDetailsDialogOpen(true);
+                    }}
+                  >
                     Details
                   </Button>
                 </div>
@@ -176,6 +242,30 @@ const Events = () => {
             </CardContent>
           </Card>
         )}
+
+        <CreateEventDialog 
+          isOpen={isCreateDialogOpen}
+          onClose={() => setIsCreateDialogOpen(false)}
+          onEventCreated={handleEventCreated}
+        />
+
+        <EventDetailsDialog
+          event={selectedEvent}
+          isOpen={isDetailsDialogOpen}
+          onClose={() => setIsDetailsDialogOpen(false)}
+          onRegister={handleRegister}
+        />
+
+        <TeamCreationDialog
+          eventId={selectedEvent?.id || ''}
+          isOpen={isTeamDialogOpen}
+          onClose={() => setIsTeamDialogOpen(false)}
+          onTeamCreated={(teamId) => {
+            // Handle team creation and then register for event
+            fetchEvents();
+            setIsTeamDialogOpen(false);
+          }}
+        />
       </div>
     </DashboardLayout>
   );

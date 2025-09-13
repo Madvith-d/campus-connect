@@ -29,6 +29,7 @@ const Clubs = () => {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [loadingClubs, setLoadingClubs] = useState(true);
   const [joinRequestLoading, setJoinRequestLoading] = useState<string | null>(null);
+  const [isCreateEventDialogOpen, setIsCreateEventDialogOpen] = useState(false);
 
   if (loading) {
     return (
@@ -234,7 +235,13 @@ const Clubs = () => {
                   <div className="flex gap-2 pt-2">
                     {club.user_membership?.role === 'admin' ? (
                       <>
-                        <CreateEventDialog clubId={club.id} onEventCreated={fetchClubs} />
+                        <Button 
+                          size="sm" 
+                          onClick={() => setIsCreateEventDialogOpen(true)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Create Event
+                        </Button>
                         <JoinRequestsDialog 
                           clubId={club.id}
                           clubName={club.name}
@@ -331,6 +338,12 @@ const Clubs = () => {
             </CardContent>
           </Card>
         )}
+
+        <CreateEventDialog
+          isOpen={isCreateEventDialogOpen}
+          onClose={() => setIsCreateEventDialogOpen(false)}
+          onEventCreated={fetchClubs}
+        />
       </div>
     </DashboardLayout>
   );
