@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { ensureCollegeAdminExists, checkAndPromoteToAdmin } from '@/lib/admin-setup';
 
 interface Profile {
   user_id: string;
@@ -57,13 +58,39 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
 
-      setProfile(data);
+      // Check if user should be promoted to college admin
+      const { promoted } = await checkAndPromoteToAdmin(data);
+      
+      if (promoted) {
+        // Refetch profile to get updated role
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+        
+        setProfile(updatedProfile);
+      } else {
+        setProfile(data);
+      }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
     }
   };
 
   useEffect(() => {
+    // Ensure college admin exists on app initialization (only once)
+    const initializeAdmin = async () => {
+      try {
+        await ensureCollegeAdminExists();
+      } catch (error) {
+        console.error('Error initializing admin:', error);
+      }
+    };
+    
+    // Only run once when the app starts
+    initializeAdmin();
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -102,15 +129,51 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // First, test Supabase connection
+      const { data: testData, error: testError } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+      
+      if (testError) {
+        console.error('Supabase connection test failed:', testError);
+        toast({
+          title: "Connection Error",
+          description: "Cannot connect to the server. Please check your internet connection and try again.",
+          variant: "destructive",
+        });
+        return { error: testError };
+      }
+
+      // Add timeout to prevent hanging requests
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      );
+      
+      const authPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      const { error } = await Promise.race([authPromise, timeoutPromise]) as any;
 
       if (error) {
+        console.error('Auth error details:', error);
+        
+        let errorMessage = error.message;
+        
+        // Handle specific error types
+        if (error.message?.includes('Failed to fetch') || error.message?.includes('network')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (error.message?.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please try again.';
+        } else if (error.message?.includes('AuthRetryableFetchError')) {
+          errorMessage = 'Connection failed. Please check your internet connection and Supabase configuration.';
+        }
+        
         toast({
           title: "Sign In Error",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
@@ -121,8 +184,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       return { error };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign in error:', error);
+      
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+      if (error.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Please check your internet connection and try again.';
+      } else if (error.message?.includes('Failed to fetch')) {
+        errorMessage = 'Network error. Please check your internet connection and Supabase configuration.';
+      } else if (error.message?.includes('AuthRetryableFetchError')) {
+        errorMessage = 'Connection failed. Please check your internet connection and try again.';
+      }
+      
+      toast({
+        title: "Connection Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
       return { error };
     }
   };

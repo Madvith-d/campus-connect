@@ -35,20 +35,35 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }: CreateEventDialo
   // Fetch clubs where user is admin
   useEffect(() => {
     const fetchUserClubs = async () => {
-      if (!profile || profile.role !== 'club_admin') return;
+      if (!profile) return;
 
       try {
-        const { data, error } = await supabase
-          .from('club_members')
-          .select(`
-            clubs (id, name)
-          `)
-          .eq('profile_id', profile.user_id)
-          .eq('role', 'admin');
-
-        if (error) throw error;
+        let clubs = [];
         
-        const clubs = data?.map(item => item.clubs).filter(Boolean) || [];
+        if (profile.role === 'college_admin') {
+          // College admins can create events for any club
+          const { data, error } = await supabase
+            .from('clubs')
+            .select('id, name')
+            .eq('approved', true)
+            .order('name');
+            
+          if (error) throw error;
+          clubs = data || [];
+        } else if (profile.role === 'club_admin') {
+          // Club admins can only create events for clubs they admin
+          const { data, error } = await supabase
+            .from('club_members')
+            .select(`
+              clubs (id, name)
+            `)
+            .eq('profile_id', profile.user_id)
+            .eq('role', 'admin');
+
+          if (error) throw error;
+          clubs = data?.map(item => item.clubs).filter(Boolean) || [];
+        }
+        
         setUserClubs(clubs);
         if (clubs.length > 0) {
           setSelectedClubId(clubs[0].id);
@@ -145,7 +160,10 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }: CreateEventDialo
         {userClubs.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground">
-              You need to be a club admin to create events.
+              {profile?.role === 'college_admin' 
+                ? 'No approved clubs available.'
+                : 'You need to be a club admin to create events.'
+              }
             </p>
           </div>
         ) : (

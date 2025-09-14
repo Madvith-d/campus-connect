@@ -4,12 +4,14 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Users, Clock, Plus } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Plus, BarChart3, QrCode, UserCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import CreateEventDialog from '@/components/Events/CreateEventDialog';
 import EventDetailsDialog from '@/components/Events/EventDetailsDialog';
 import TeamCreationDialog from '@/components/Events/TeamCreationDialog';
+import AttendanceDashboard from '@/components/Events/AttendanceDashboard';
+import AttendanceCheckIn from '@/components/Events/AttendanceCheckIn';
 
 interface Event {
   id: string;
@@ -37,6 +39,8 @@ const Events = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
+  const [isAttendanceDashboardOpen, setIsAttendanceDashboardOpen] = useState(false);
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   if (loading) {
@@ -103,6 +107,22 @@ const Events = () => {
     return 'text-green-500';
   };
 
+  // Check if event is happening now (for attendance)
+  const isEventActive = (event: Event) => {
+    const now = new Date();
+    const start = new Date(event.start_time);
+    const end = new Date(event.end_time);
+    return now >= start && now <= end;
+  };
+
+  // Check if user can manage this event
+  const canManageEvent = (event: Event) => {
+    if (profile?.role === 'college_admin') return true;
+    // Check if user is club admin for this event's club
+    // This would require additional club member data which we'd fetch separately
+    return false;
+  };
+
   const handleEventCreated = () => {
     fetchEvents();
   };
@@ -147,12 +167,23 @@ const Events = () => {
             </p>
           </div>
           
-          {profile?.role === 'club_admin' && (
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Event
+          <div className="flex gap-2">
+            {/* Quick Check-in Button */}
+            <Button 
+              variant="outline"
+              onClick={() => setIsCheckInOpen(true)}
+            >
+              <QrCode className="h-4 w-4 mr-2" />
+              Quick Check-in
             </Button>
-          )}
+            
+            {(profile?.role === 'club_admin' || profile?.role === 'college_admin') && (
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Event
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -215,6 +246,36 @@ const Events = () => {
                       Register
                     </Button>
                   )}
+                            
+                  {/* Attendance Check-in Button */}
+                  {isEventActive(event) && isRegistered(event) && (
+                    <Button 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedEvent(event);
+                        setIsCheckInOpen(true);
+                      }}
+                    >
+                      <UserCheck className="h-4 w-4 mr-1" />
+                      Check-in
+                    </Button>
+                  )}
+                            
+                  {/* Management Buttons for Admins */}
+                  {canManageEvent(event) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedEvent(event);
+                        setIsAttendanceDashboardOpen(true);
+                      }}
+                    >
+                      <BarChart3 className="h-4 w-4 mr-1" />
+                      Dashboard
+                    </Button>
+                  )}
+                            
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -265,6 +326,25 @@ const Events = () => {
             fetchEvents();
             setIsTeamDialogOpen(false);
           }}
+        />
+
+        <AttendanceDashboard
+          isOpen={isAttendanceDashboardOpen}
+          onClose={() => setIsAttendanceDashboardOpen(false)}
+          eventId={selectedEvent?.id || ''}
+          eventTitle={selectedEvent?.title || ''}
+          clubName={selectedEvent?.clubs?.name || ''}
+          location={selectedEvent?.location || ''}
+          startTime={selectedEvent?.start_time || ''}
+          endTime={selectedEvent?.end_time || ''}
+        />
+
+        <AttendanceCheckIn
+          isOpen={isCheckInOpen}
+          onClose={() => setIsCheckInOpen(false)}
+          eventId={selectedEvent?.id || ''}
+          eventTitle={selectedEvent?.title || ''}
+          onAttendanceLogged={fetchEvents}
         />
       </div>
     </DashboardLayout>

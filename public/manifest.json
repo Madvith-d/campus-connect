@@ -1,0 +1,50 @@
+{
+  "name": "Campus Connect",
+  "short_name": "CampusConnect",
+  "description": "College Event Check-in and Attendance Management System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/placeholder.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Quick Check-in",
+      "short_name": "Check-in",
+      "description": "Quickly scan QR code for event check-in",
+      "url": "/events?action=checkin",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "32x32"
+        }
+      ]
+    },
+    {
+      "name": "Browse Events",
+      "short_name": "Events",
+      "description": "View and register for upcoming events",
+      "url": "/events",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "32x32"
+        }
+      ]
+    }
+  ]
+}

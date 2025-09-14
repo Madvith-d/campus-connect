@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/use-toast';
 import { Navigate } from 'react-router-dom';
 
 const branches = [
@@ -21,6 +22,7 @@ const branches = [
 
 const Auth = () => {
   const { signIn, signUp, user, loading } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   // Sign In Form State
@@ -79,7 +81,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-primary">CampusConnect</h1>
+          <h1 className="text-3xl font-bold text-primary">Campus Connect</h1>
           <p className="text-muted-foreground">College Event Management System</p>
         </div>
 
@@ -229,6 +231,12 @@ const Auth = () => {
             </TabsContent>
           </Tabs>
         </Card>
+        
+        <div className="text-center text-sm text-muted-foreground">
+          <p>
+            Admin credentials: Use USN <code className="bg-muted px-1 rounded">ADMIN001</code> to auto-promote to college admin
+          </p>
+        </div>
       </div>
     </div>
   );

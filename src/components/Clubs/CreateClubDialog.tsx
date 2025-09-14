@@ -14,7 +14,7 @@ interface CreateClubDialogProps {
 }
 
 const CreateClubDialog = ({ onClubCreated }: CreateClubDialogProps) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,6 +22,11 @@ const CreateClubDialog = ({ onClubCreated }: CreateClubDialogProps) => {
     name: '',
     description: '',
   });
+
+  // Only college admins can create clubs
+  if (profile?.role !== 'college_admin') {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +40,7 @@ const CreateClubDialog = ({ onClubCreated }: CreateClubDialogProps) => {
           name: formData.name,
           description: formData.description,
           created_by: user.id,
+          approved: true, // College admin created clubs are automatically approved
         });
 
       if (error) {
@@ -48,7 +54,7 @@ const CreateClubDialog = ({ onClubCreated }: CreateClubDialogProps) => {
 
       toast({
         title: "Club created successfully",
-        description: "The club is now pending approval.",
+        description: "The club has been created and is now active.",
       });
 
       setFormData({ name: '', description: '' });
@@ -78,7 +84,7 @@ const CreateClubDialog = ({ onClubCreated }: CreateClubDialogProps) => {
         <DialogHeader>
           <DialogTitle>Create New Club</DialogTitle>
           <DialogDescription>
-            Submit a new club for approval by college administration.
+            As a college admin, you can create clubs and assign club administrators.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

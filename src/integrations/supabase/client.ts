@@ -2,16 +2,55 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://ltthgdnsbqgukkicitxe.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGhnZG5zYnFndWtraWNpdHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyOTA3NjUsImV4cCI6MjA3Mjg2Njc2NX0.B12m8h605-P0eKlCZXovFRxTWWuv-KZECf8_4WqpKl4";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Enhanced error handling for missing environment variables
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  console.error('Missing Supabase environment variables:');
+  console.error('VITE_SUPABASE_URL:', SUPABASE_URL ? '✓ Set' : '✗ Missing');
+  console.error('VITE_SUPABASE_ANON_KEY:', SUPABASE_PUBLISHABLE_KEY ? '✓ Set' : '✗ Missing');
+  console.error('Please check your .env file and ensure both variables are properly configured.');
+  
+  // Don't throw error immediately, allow graceful degradation
+  console.warn('Continuing with fallback configuration...');
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
+// Create client with enhanced error handling
+export const supabase = createClient<Database>(
+  SUPABASE_URL || 'http://localhost:54321', 
+  SUPABASE_PUBLISHABLE_KEY || 'fallback_key', 
+  {
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce'
+    },
+    global: {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
   }
-});
+);
+
+// Test connection on import
+if (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY) {
+  // Test connection asynchronously
+  supabase.from('profiles').select('count').limit(1)
+    .then(({ error }) => {
+      if (error) {
+        console.error('Supabase connection test failed:', error);
+      } else {
+        console.log('✓ Supabase connection successful');
+      }
+    })
+    .catch((error) => {
+      console.error('Supabase connection error:', error);
+    });
+}

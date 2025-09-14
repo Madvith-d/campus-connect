@@ -1,10 +1,12 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, Users, Calendar, Shield, Building, Home } from 'lucide-react';
+import { LogOut, Users, Calendar, Shield, Building, Home, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { config } from '@/lib/config';
+import AdminSetupDialog from '@/components/Admin/AdminSetupDialog';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,6 +15,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
+  const [isAdminSetupOpen, setIsAdminSetupOpen] = useState(false);
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
@@ -52,7 +55,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <header className="bg-card border-b">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-primary">CampusConnect</h1>
+            <h1 className="text-2xl font-bold text-primary">{config.appName}</h1>
             {profile && (
               <Badge variant={getRoleBadgeVariant(profile.role)}>
                 {getRoleLabel(profile.role)}
@@ -67,6 +70,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <p className="text-sm text-muted-foreground">{profile.usn}</p>
               </div>
             )}
+            
+            {/* Admin Setup Button (if no college admin exists) */}
+            {profile?.role !== 'student' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsAdminSetupOpen(true)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Setup
+              </Button>
+            )}
+            
             <Button variant="outline" size="sm" onClick={signOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
@@ -131,6 +147,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {children}
         </main>
       </div>
+      
+      <AdminSetupDialog
+        isOpen={isAdminSetupOpen}
+        onClose={() => setIsAdminSetupOpen(false)}
+        onSetupComplete={() => {
+          setIsAdminSetupOpen(false);
+          // Optionally refresh the page to update user role
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

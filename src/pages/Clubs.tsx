@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Building, Users, Calendar, Plus, CheckCircle, Clock, Loader2 } from 'lucide-react';
 import CreateClubDialog from '@/components/Clubs/CreateClubDialog';
 import JoinRequestsDialog from '@/components/Clubs/JoinRequestsDialog';
+import ClubAdminAssignmentDialog from '@/components/Clubs/ClubAdminAssignmentDialog';
 import CreateEventDialog from '@/components/Events/CreateEventDialog';
 
 interface Club {
@@ -177,11 +178,16 @@ const Clubs = () => {
           <div>
             <h1 className="text-3xl font-bold">Clubs</h1>
             <p className="text-muted-foreground">
-              Join clubs and participate in activities
+              {profile?.role === 'college_admin' 
+                ? 'Manage clubs and assign administrators'
+                : 'Join clubs and participate in activities'
+              }
             </p>
           </div>
           
-          <CreateClubDialog onClubCreated={fetchClubs} />
+          {profile?.role === 'college_admin' && (
+            <CreateClubDialog onClubCreated={fetchClubs} />
+          )}
         </div>
 
         {/* Loading State */}
@@ -233,7 +239,18 @@ const Clubs = () => {
                   </div>
                   
                   <div className="flex gap-2 pt-2">
-                    {club.user_membership?.role === 'admin' ? (
+                    {profile?.role === 'college_admin' ? (
+                      <>
+                        <ClubAdminAssignmentDialog 
+                          clubId={club.id}
+                          clubName={club.name}
+                          onAssignmentComplete={fetchClubs}
+                        />
+                        <Button variant="outline" size="sm">
+                          View Details
+                        </Button>
+                      </>
+                    ) : club.user_membership?.role === 'admin' ? (
                       <>
                         <Button 
                           size="sm" 
