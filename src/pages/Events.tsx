@@ -159,15 +159,15 @@ const Events = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Events</h1>
+            <h1>Events</h1>
             <p className="text-muted-foreground">
               Discover and register for college events
             </p>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {/* Quick Check-in Button */}
             <Button 
               variant="outline"
@@ -186,9 +186,9 @@ const Events = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {events.map((event) => (
-            <Card key={event.id} className="hover:shadow-lg transition-shadow">
+            <Card key={event.id} className="hover:shadow-lg transition-shadow elevate-card">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -232,7 +232,7 @@ const Events = () => {
                   </div>
                 </div>
                 
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   {isRegistered(event) ? (
                     <Button className="flex-1" size="sm" disabled>
                       Registered

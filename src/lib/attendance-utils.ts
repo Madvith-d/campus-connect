@@ -158,20 +158,29 @@ export async function manualAttendanceLog(
   adminId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Verify admin has permission to manage this event
-    const { data: permission, error: permError } = await supabase
+    // Verify admin has permission to manage this event without nested joins (avoid RLS recursion)
+    const { data: eventRow, error: eventError } = await supabase
       .from('events')
-      .select(`
-        id,
-        club_id,
-        club_members!inner(profile_id, role)
-      `)
+      .select('id, club_id')
       .eq('id', eventId)
-      .eq('club_members.profile_id', adminId)
-      .eq('club_members.role', 'admin')
       .single();
 
-    if (permError || !permission) {
+    if (eventError || !eventRow) {
+      return {
+        success: false,
+        error: 'Event not found',
+      };
+    }
+
+    const { data: adminMembership, error: membershipError } = await supabase
+      .from('club_members')
+      .select('id')
+      .eq('club_id', eventRow.club_id)
+      .eq('profile_id', adminId)
+      .eq('role', 'admin')
+      .limit(1);
+
+    if (membershipError || !adminMembership || adminMembership.length === 0) {
       return {
         success: false,
         error: 'You do not have permission to manage attendance for this event',
@@ -271,20 +280,26 @@ export async function getEventAttendanceLogs(
   adminId: string
 ): Promise<AttendanceLogEntry[] | null> {
   try {
-    // Verify admin permission
-    const { data: permission, error: permError } = await supabase
+    // Verify admin permission without nested join
+    const { data: eventRow, error: eventError } = await supabase
       .from('events')
-      .select(`
-        id,
-        club_id,
-        club_members!inner(profile_id, role)
-      `)
+      .select('id, club_id')
       .eq('id', eventId)
-      .eq('club_members.profile_id', adminId)
-      .eq('club_members.role', 'admin')
       .single();
 
-    if (permError || !permission) {
+    if (eventError || !eventRow) {
+      throw new Error('Event not found');
+    }
+
+    const { data: adminMembership, error: membershipError } = await supabase
+      .from('club_members')
+      .select('id')
+      .eq('club_id', eventRow.club_id)
+      .eq('profile_id', adminId)
+      .eq('role', 'admin')
+      .limit(1);
+
+    if (membershipError || !adminMembership || adminMembership.length === 0) {
       throw new Error('Permission denied');
     }
 

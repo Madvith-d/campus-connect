@@ -19,7 +19,7 @@ class PWAManager {
 
   async init(): Promise<void> {
     // Register service worker
-    if ('serviceWorker' in navigator) {
+    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       try {
         const registration = await navigator.serviceWorker.register('/sw.js');
         console.log('Service Worker registered:', registration);
@@ -157,7 +157,7 @@ class PWAManager {
 
   // Offline support utilities
   async enableOfflineSupport(): Promise<void> {
-    if ('caches' in window) {
+    if (import.meta.env.PROD && 'caches' in window) {
       try {
         // Pre-cache critical resources
         const cache = await caches.open('campus-connect-critical');
@@ -204,7 +204,7 @@ class PWAManager {
 
   // Clear service worker and caches (useful for debugging)
   async clearServiceWorkerAndCaches(): Promise<void> {
-    if ('serviceWorker' in navigator) {
+    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       try {
         // Unregister service worker
         const registrations = await navigator.serviceWorker.getRegistrations();

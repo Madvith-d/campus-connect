@@ -108,6 +108,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }: CreateEventDialo
           capacity: formData.capacity,
           is_team_event: formData.is_team_event,
           club_id: selectedClubId,
+          created_by: user.id,
         });
 
       if (error) {

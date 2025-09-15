@@ -42,7 +42,7 @@ const ClubAdminAssignmentDialog = ({ clubId, clubName, onAssignmentComplete }: C
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Get all users
+      // 1) Get all users (profiles)
       const { data: allUsers, error: usersError } = await supabase
         .from('profiles')
         .select('user_id, name, usn, branch, role')
@@ -50,25 +50,32 @@ const ClubAdminAssignmentDialog = ({ clubId, clubName, onAssignmentComplete }: C
 
       if (usersError) throw usersError;
 
-      // Get current club members
-      const { data: memberships, error: membershipError } = await supabase
-        .from('club_members')
-        .select(`
-          profile_id,
-          role,
-          profiles!inner(user_id, name, usn, branch, role)
-        `)
-        .eq('club_id', clubId);
+      // 2) Get current club members without nested profile join to avoid RLS recursion
+      let membershipRows: any[] | null = null;
+      try {
+        const { data, error } = await supabase
+          .from('club_members')
+          .select('profile_id, role')
+          .eq('club_id', clubId);
+        if (error) throw error;
+        membershipRows = data || [];
+      } catch (err: any) {
+        // Handle recursive RLS error by falling back to no preloaded members
+        if (err?.code === '42P17') {
+          membershipRows = [];
+        } else {
+          throw err;
+        }
+      }
 
-      if (membershipError) throw membershipError;
-
-      const members = memberships?.map(m => ({
-        ...m.profiles,
+      const profileIdToUser = new Map((allUsers || []).map(u => [u.user_id, u]));
+      const members = (membershipRows || []).map(m => ({
+        ...(profileIdToUser.get(m.profile_id) || { user_id: m.profile_id, name: 'Unknown', usn: '', branch: '', role: 'student' as const }),
         club_role: m.role
-      })) || [];
+      }));
 
       const memberIds = new Set(members.map(m => m.user_id));
-      const nonMembers = allUsers?.filter(user => !memberIds.has(user.user_id)) || [];
+      const nonMembers = (allUsers || []).filter(user => !memberIds.has(user.user_id));
 
       setAvailableUsers(nonMembers);
       setClubMembers(members);

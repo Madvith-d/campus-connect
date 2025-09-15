@@ -12,6 +12,7 @@ import Clubs from "./pages/Clubs";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import ConfigSetup from "./components/ConfigSetup";
+import ProtectedRoute from "@/components/Layout/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -53,7 +54,7 @@ const App = () => {
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center animate-fadeIn">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-2 text-muted-foreground">Checking configuration...</p>
@@ -74,11 +75,39 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/clubs" element={<Clubs />} />
-              <Route path="/admin" element={<Admin />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/events"
+                element={
+                  <ProtectedRoute>
+                    <Events />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clubs"
+                element={
+                  <ProtectedRoute>
+                    <Clubs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
+                }
+              />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

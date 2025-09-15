@@ -57,6 +57,7 @@ const Clubs = () => {
   const fetchClubs = async () => {
     setLoadingClubs(true);
     try {
+      // 1) Fetch clubs only (avoid nested aggregates to prevent RLS recursion)
       let query = supabase
         .from('clubs')
         .select(`
@@ -64,9 +65,7 @@ const Clubs = () => {
           name,
           description,
           approved,
-          created_by,
-          club_members(count),
-          events(count)
+          created_by
         `);
 
       // College admins see all clubs, others see only approved ones
@@ -81,20 +80,46 @@ const Clubs = () => {
         return;
       }
 
-      // Get user's membership status for each club
+      // 2) Get user's membership status for each club
       const { data: memberships } = await supabase
         .from('club_members')
         .select('club_id, role')
         .eq('profile_id', user.id);
 
-      // Get pending join requests count for club admins
+      // Build quick lookup for user's role per club
       const membershipMap = new Map(memberships?.map(m => [m.club_id, m]) || []);
-      
+
+      const clubIds = (clubsData || []).map((c: any) => c.id);
+
+      // 3) Fetch events for these clubs and count client-side
+      let eventsCountMap = new Map<string, number>();
+      if (clubIds.length > 0) {
+        const { data: eventsRows } = await supabase
+          .from('events')
+          .select('club_id')
+          .in('club_id', clubIds);
+        for (const row of eventsRows || []) {
+          eventsCountMap.set(row.club_id, (eventsCountMap.get(row.club_id) || 0) + 1);
+        }
+      }
+
+      // 4) Fetch visible club_members rows and count client-side
+      let memberCountMap = new Map<string, number>();
+      if (clubIds.length > 0) {
+        const { data: memberRows } = await supabase
+          .from('club_members')
+          .select('club_id')
+          .in('club_id', clubIds);
+        for (const row of memberRows || []) {
+          memberCountMap.set(row.club_id, (memberCountMap.get(row.club_id) || 0) + 1);
+        }
+      }
+
       const enrichedClubs = await Promise.all(clubsData?.map(async (club: any) => {
         const membership = membershipMap.get(club.id);
         let pendingRequests = 0;
-        
-        // Get pending requests count for club admins
+
+        // Get pending requests count for club admins only
         if (membership?.role === 'admin') {
           const { count } = await supabase
             .from('join_requests')
@@ -109,8 +134,8 @@ const Clubs = () => {
           name: club.name,
           description: club.description,
           approved: club.approved,
-          member_count: club.club_members?.[0]?.count || 0,
-          event_count: club.events?.[0]?.count || 0,
+          member_count: memberCountMap.get(club.id) || 0,
+          event_count: eventsCountMap.get(club.id) || 0,
           user_membership: membership,
           pending_requests: pendingRequests,
         };
@@ -177,9 +202,9 @@ const Clubs = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Clubs</h1>
+            <h1>Clubs</h1>
             <p className="text-muted-foreground">
               {profile?.role === 'college_admin' 
                 ? 'Manage clubs and assign administrators'
@@ -187,7 +212,7 @@ const Clubs = () => {
               }
             </p>
           </div>
-          
+
           {profile?.role === 'college_admin' && (
             <CreateClubDialog onClubCreated={fetchClubs} />
           )}
@@ -209,9 +234,9 @@ const Clubs = () => {
               Active Clubs
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
               {approvedClubs.map((club) => (
-              <Card key={club.id} className="hover:shadow-lg transition-shadow">
+              <Card key={club.id} className="hover:shadow-lg transition-shadow elevate-card">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -313,7 +338,7 @@ const Clubs = () => {
               Pending Approval ({pendingClubs.length})
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
               {pendingClubs.map((club) => (
                 <Card key={club.id} className="border-orange-200 bg-orange-50/50">
                   <CardHeader>

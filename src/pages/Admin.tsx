@@ -239,9 +239,9 @@ const Admin = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold flex items-center">
+            <h1 className="flex items-center">
               <Shield className="h-8 w-8 mr-3 text-red-500" />
               Admin Panel
             </h1>
@@ -260,7 +260,7 @@ const Admin = () => {
             <p className="ml-2 text-muted-foreground">Loading statistics...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
