@@ -22,6 +22,7 @@ interface Club {
   event_count?: number;
   user_membership?: any;
   pending_requests?: number;
+  pending_request?: boolean;
 }
 
 const Clubs = () => {
@@ -115,6 +116,20 @@ const Clubs = () => {
         }
       }
 
+      // 5) Fetch user's pending join requests for these clubs
+      let pendingRequestMap = new Map<string, boolean>();
+      if (clubIds.length > 0) {
+        const { data: pendingRows } = await supabase
+          .from('join_requests')
+          .select('club_id, status')
+          .eq('profile_id', user.id)
+          .in('club_id', clubIds)
+          .eq('status', 'pending');
+        for (const row of pendingRows || []) {
+          pendingRequestMap.set((row as any).club_id, true);
+        }
+      }
+
       const enrichedClubs = await Promise.all(clubsData?.map(async (club: any) => {
         const membership = membershipMap.get(club.id);
         let pendingRequests = 0;
@@ -138,6 +153,7 @@ const Clubs = () => {
           event_count: eventsCountMap.get(club.id) || 0,
           user_membership: membership,
           pending_requests: pendingRequests,
+          pending_request: pendingRequestMap.get(club.id) || false,
         };
       }) || []);
 
@@ -309,10 +325,12 @@ const Clubs = () => {
                           className="flex-1" 
                           size="sm"
                           onClick={() => handleJoinRequest(club.id)}
-                          disabled={joinRequestLoading === club.id}
+                          disabled={joinRequestLoading === club.id || club.pending_request}
                         >
                           {joinRequestLoading === club.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : club.pending_request ? (
+                            'Requested'
                           ) : (
                             'Request to Join'
                           )}

@@ -66,26 +66,25 @@ const Index = () => {
         .order('start_time', { ascending: true })
         .limit(3);
 
-      // Fetch user registrations if student
+      // Fetch user registrations for the authenticated user (any role)
       let registrations = [];
-      if (profile?.role === 'student') {
-        const { data } = await supabase
-          .from('registrations')
-          .select(`
-            id,
-            events(
-              title,
-              start_time,
-              is_team_event
-            ),
-            teams(name)
-          `)
-          .eq('profile_id', profile.user_id)
-          .order('registered_at', { ascending: false })
-          .limit(3);
-        
-        registrations = data || [];
-      }
+      const { data: registrationsData } = await supabase
+        .from('registrations')
+        .select(`
+          id,
+          registered_at,
+          events(
+            title,
+            start_time,
+            is_team_event
+          ),
+          teams(name)
+        `)
+        .eq('profile_id', user.id)
+        .order('registered_at', { ascending: false })
+        .limit(3);
+
+      registrations = registrationsData || [];
 
       setStats({
         totalEvents: eventsRes.count || 0,
@@ -245,26 +244,21 @@ const Index = () => {
                   userRegistrations.map((registration: any) => (
                     <div key={registration.id} className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium">{registration.events.title}</p>
+                        <p className="text-sm font-medium">{registration.events?.title || 'Event unavailable'}</p>
                         <p className="text-xs text-muted-foreground">
-                          {registration.events.is_team_event ? 
+                          {registration.events?.is_team_event ? 
                             `Team: ${registration.teams?.name || 'No team'}` : 
                             'Individual'
                           }
                         </p>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {formatEventTime(registration.events.start_time)}
+                        {registration.events?.start_time ? formatEventTime(registration.events.start_time) : ''}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {profile?.role === 'student' ? 
-                      'No event registrations yet' : 
-                      'Register for events to see them here'
-                    }
-                  </p>
+                  <p className="text-sm text-muted-foreground">No event registrations yet</p>
                 )}
               </div>
             </CardContent>
