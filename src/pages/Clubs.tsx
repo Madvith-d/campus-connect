@@ -32,6 +32,13 @@ const Clubs = () => {
   const [joinRequestLoading, setJoinRequestLoading] = useState<string | null>(null);
   const [isCreateEventDialogOpen, setIsCreateEventDialogOpen] = useState(false);
 
+  // Ensure hooks are called before any early returns
+  useEffect(() => {
+    if (user && profile) {
+      fetchClubs();
+    }
+  }, [user, profile]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -58,7 +65,7 @@ const Clubs = () => {
           description,
           approved,
           created_by,
-          club_members!inner(count),
+          club_members(count),
           events(count)
         `);
 
@@ -117,11 +124,7 @@ const Clubs = () => {
     }
   };
 
-  useEffect(() => {
-    if (user && profile) {
-      fetchClubs();
-    }
-  }, [user, profile]);
+  
 
   const handleJoinRequest = async (clubId: string) => {
     setJoinRequestLoading(clubId);
