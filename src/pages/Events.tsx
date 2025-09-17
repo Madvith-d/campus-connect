@@ -4,14 +4,16 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Users, Clock, Plus, BarChart3, QrCode, UserCheck } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Plus, BarChart3, QrCode, UserCheck, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import CreateEventDialog from '@/components/Events/CreateEventDialog';
+import EditEventDialog from '@/components/Events/EditEventDialog';
 import EventDetailsDialog from '@/components/Events/EventDetailsDialog';
 import TeamCreationDialog from '@/components/Events/TeamCreationDialog';
 import AttendanceDashboard from '@/components/Events/AttendanceDashboard';
 import AttendanceCheckIn from '@/components/Events/AttendanceCheckIn';
+import { useNavigate } from 'react-router-dom';
 
 interface Event {
   id: string;
@@ -34,6 +36,7 @@ interface Event {
 
 const Events = () => {
   const { user, profile, loading } = useAuth();
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -41,6 +44,8 @@ const Events = () => {
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [isAttendanceDashboardOpen, setIsAttendanceDashboardOpen] = useState(false);
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [adminClubIds, setAdminClubIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   if (loading) {
@@ -84,6 +89,25 @@ const Events = () => {
     }
   }, [user]);
 
+  // Load club admin memberships to enable management controls for club admins
+  useEffect(() => {
+    const loadAdminClubs = async () => {
+      if (!profile?.user_id) return;
+      try {
+        const { data, error } = await supabase
+          .from('club_members')
+          .select('club_id')
+          .eq('profile_id', profile.user_id)
+          .eq('role', 'admin');
+        if (error) throw error;
+        setAdminClubIds(new Set((data || []).map((row: any) => row.club_id)));
+      } catch (e) {
+        console.error('Failed to load admin clubs', e);
+      }
+    };
+    loadAdminClubs();
+  }, [profile?.user_id]);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'short',
@@ -118,8 +142,7 @@ const Events = () => {
   // Check if user can manage this event
   const canManageEvent = (event: Event) => {
     if (profile?.role === 'college_admin') return true;
-    // Check if user is club admin for this event's club
-    // This would require additional club member data which we'd fetch separately
+    if (profile?.role === 'club_admin' && adminClubIds.has(event.club_id)) return true;
     return false;
   };
 
@@ -263,17 +286,27 @@ const Events = () => {
                             
                   {/* Management Buttons for Admins */}
                   {canManageEvent(event) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        setSelectedEvent(event);
-                        setIsAttendanceDashboardOpen(true);
-                      }}
-                    >
-                      <BarChart3 className="h-4 w-4 mr-1" />
-                      Dashboard
-                    </Button>
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/events/${event.id}/analytics`)}
+                      >
+                        <BarChart3 className="h-4 w-4 mr-1" />
+                        Analytics
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedEvent(event);
+                          setIsEditDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    </>
                   )}
                             
                   <Button 
@@ -345,6 +378,16 @@ const Events = () => {
           eventId={selectedEvent?.id || ''}
           eventTitle={selectedEvent?.title || ''}
           onAttendanceLogged={fetchEvents}
+        />
+
+        <EditEventDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          event={selectedEvent}
+          onEventUpdated={() => {
+            setIsEditDialogOpen(false);
+            fetchEvents();
+          }}
         />
       </div>
     </DashboardLayout>

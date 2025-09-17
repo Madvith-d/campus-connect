@@ -211,16 +211,10 @@ export async function getAttendanceStats(eventId: string): Promise<AttendanceSta
 
     if (regError) throw regError;
 
-    // Get attendance logs with profile info
+    // Get attendance logs without nested profile join (avoid RLS recursion)
     const { data: attendanceLogs, error: attError } = await supabase
       .from('attendance_logs')
-      .select(`
-        id,
-        profile_id,
-        method,
-        timestamp,
-        profiles(name, usn)
-      `)
+      .select('id, profile_id, method, timestamp')
       .eq('event_id', eventId)
       .order('timestamp', { ascending: false });
 
@@ -229,13 +223,30 @@ export async function getAttendanceStats(eventId: string): Promise<AttendanceSta
     const totalAttended = attendanceLogs?.length || 0;
     const attendanceRate = totalRegistered ? (totalAttended / totalRegistered) * 100 : 0;
 
-    const recentAttendees = (attendanceLogs || []).slice(0, 10).map(log => ({
-      id: log.id,
-      name: (log.profiles as any)?.name || 'Unknown',
-      usn: (log.profiles as any)?.usn || 'Unknown',
-      timestamp: log.timestamp,
-      method: log.method as AttendanceMethod,
-    }));
+    // Fetch profiles separately to avoid nested joins in RLS-protected tables
+    const profileIds = Array.from(new Set((attendanceLogs || []).map((l: any) => l.profile_id)));
+    let profileMap: Record<string, { name: string; usn: string }> = {};
+    if (profileIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, name, usn')
+        .in('user_id', profileIds);
+      if (profilesError) throw profilesError;
+      for (const p of profilesData || []) {
+        profileMap[p.user_id] = { name: p.name, usn: p.usn };
+      }
+    }
+
+    const recentAttendees = (attendanceLogs || []).slice(0, 10).map((log: any) => {
+      const info = profileMap[log.profile_id] || { name: 'Unknown', usn: 'Unknown' };
+      return {
+        id: log.id,
+        name: info.name,
+        usn: info.usn,
+        timestamp: log.timestamp,
+        method: log.method as AttendanceMethod,
+      };
+    });
 
     return {
       totalRegistered: totalRegistered || 0,

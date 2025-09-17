@@ -11,6 +11,7 @@ import Events from "./pages/Events";
 import Clubs from "./pages/Clubs";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import EventsAnalytics from "./pages/EventsAnalytics";
 import ConfigSetup from "./components/ConfigSetup";
 import ProtectedRoute from "@/components/Layout/ProtectedRoute";
 
@@ -89,6 +90,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <Events />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/events/:eventId/analytics"
+                element={
+                  <ProtectedRoute>
+                    <EventsAnalytics />
                   </ProtectedRoute>
                 }
               />
