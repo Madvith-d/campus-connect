@@ -91,10 +91,10 @@ ALTER TABLE qr_validation_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance_sessions ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for qr_validation_logs
-CREATE POLICY \"Users can view their own QR validation logs\" ON qr_validation_logs
+CREATE POLICY "Users can view their own QR validation logs" ON qr_validation_logs
   FOR SELECT USING (scanner_id = auth.uid());
 
-CREATE POLICY \"Club admins can view QR logs for their events\" ON qr_validation_logs
+CREATE POLICY "Club admins can view QR logs for their events" ON qr_validation_logs
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM events e
@@ -105,7 +105,7 @@ CREATE POLICY \"Club admins can view QR logs for their events\" ON qr_validation
     )
   );
 
-CREATE POLICY \"College admins can view all QR validation logs\" ON qr_validation_logs
+CREATE POLICY "College admins can view all QR validation logs" ON qr_validation_logs
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM profiles
@@ -114,11 +114,11 @@ CREATE POLICY \"College admins can view all QR validation logs\" ON qr_validatio
     )
   );
 
-CREATE POLICY \"Insert QR validation logs\" ON qr_validation_logs
+CREATE POLICY "Insert QR validation logs" ON qr_validation_logs
   FOR INSERT WITH CHECK (scanner_id = auth.uid());
 
 -- RLS policies for attendance_sessions
-CREATE POLICY \"Club admins can manage their attendance sessions\" ON attendance_sessions
+CREATE POLICY "Club admins can manage their attendance sessions" ON attendance_sessions
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM events e
@@ -129,7 +129,7 @@ CREATE POLICY \"Club admins can manage their attendance sessions\" ON attendance
     )
   );
 
-CREATE POLICY \"College admins can view all attendance sessions\" ON attendance_sessions
+CREATE POLICY "College admins can view all attendance sessions" ON attendance_sessions
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM profiles
@@ -139,8 +139,8 @@ CREATE POLICY \"College admins can view all attendance sessions\" ON attendance_
   );
 
 -- Update existing attendance_logs table with better RLS
-DROP POLICY IF EXISTS \"Club admins can view attendance for their events\" ON attendance_logs;
-CREATE POLICY \"Club admins can view attendance for their events\" ON attendance_logs
+DROP POLICY IF EXISTS "Club admins can view attendance for their events" ON attendance_logs;
+CREATE POLICY "Club admins can view attendance for their events" ON attendance_logs
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM events e

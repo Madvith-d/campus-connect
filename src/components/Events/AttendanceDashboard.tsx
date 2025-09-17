@@ -356,6 +356,8 @@ const AttendanceDashboard = ({
         eventTitle={eventTitle}
         clubName={clubName}
         location={location}
+        eventStartTime={startTime}
+        eventEndTime={endTime}
       />
 
       <AttendanceCheckIn

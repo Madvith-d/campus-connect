@@ -12,6 +12,8 @@ interface QRDisplayProps {
   eventTitle: string;
   clubName: string;
   location: string;
+  eventStartTime: string;
+  eventEndTime: string;
 }
 
 const QRDisplay = ({ 
@@ -20,7 +22,9 @@ const QRDisplay = ({
   eventId, 
   eventTitle, 
   clubName, 
-  location 
+  location,
+  eventStartTime,
+  eventEndTime
 }: QRDisplayProps) => {
   const [qrImage, setQrImage] = useState<string | null>(null);
   const [qrData, setQrData] = useState<QRCodeData | null>(null);
@@ -37,7 +41,9 @@ const QRDisplay = ({
         eventId,
         eventTitle,
         clubName,
-        location
+        location,
+        eventStartTime,
+        eventEndTime
       );
       
       setQrData(newQrData);

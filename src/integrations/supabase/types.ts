@@ -141,6 +141,7 @@ export type Database = {
           is_team_event: boolean
           location: string
           qr_code: string
+          qr_secret: string
           start_time: string
           title: string
           updated_at: string
@@ -155,6 +156,7 @@ export type Database = {
           is_team_event?: boolean
           location: string
           qr_code?: string
+          qr_secret?: string
           start_time: string
           title: string
           updated_at?: string
@@ -169,6 +171,7 @@ export type Database = {
           is_team_event?: boolean
           location?: string
           qr_code?: string
+          qr_secret?: string
           start_time?: string
           title?: string
           updated_at?: string

@@ -276,6 +276,8 @@ const EventsAnalytics = () => {
           eventTitle={event?.title || ''}
           clubName={event?.clubs?.name || ''}
           location={event?.location || ''}
+          eventStartTime={event?.start_time || ''}
+          eventEndTime={event?.end_time || ''}
         />
 
         <AttendanceCheckIn

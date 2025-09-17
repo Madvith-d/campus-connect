@@ -16,11 +16,17 @@ const QRTestGenerator = () => {
   const generateTestQR = async () => {
     setIsGenerating(true);
     try {
+      // Generate test event times (1 hour from now to 3 hours from now)
+      const eventStartTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const eventEndTime = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+      
       const { qrImage: image } = await generateEventQRCode(
         eventId,
         eventTitle,
         clubName,
-        location
+        location,
+        eventStartTime,
+        eventEndTime
       );
       setQrImage(image);
     } catch (error) {
