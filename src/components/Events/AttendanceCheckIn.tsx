@@ -9,9 +9,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { QrCode, UserCheck, Search, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import QRScanner from '@/components/QR/QRScanner';
-import { processQRAttendance, manualAttendanceLog } from '@/lib/attendance-utils';
-import { QRCodeValidationResult } from '@/lib/qr-utils';
+import QRScannerFixed from '@/components/QR/QRScannerFixed';
+import { processQRAttendance, manualAttendanceLog, AttendanceResult } from '@/lib/attendance-utils';
+import { QRCodeValidationResult } from '@/lib/qr-utils-enhanced';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AttendanceCheckInProps {
@@ -73,7 +73,7 @@ const AttendanceCheckIn = ({
     }
 
     try {
-      const attendanceResult = await processQRAttendance(
+      const attendanceResult: AttendanceResult = await processQRAttendance(
         JSON.stringify(result),
         profile.user_id,
         profile.role
@@ -82,7 +82,18 @@ const AttendanceCheckIn = ({
       if (attendanceResult.success) {
         toast({
           title: "Attendance Logged",
-          description: `Successfully checked in to ${attendanceResult.eventTitle || 'the event'}.`,
+          description: (
+            <div className="space-y-2">
+              <p>Successfully checked in to {attendanceResult.eventTitle || 'the event'}.</p>
+              {attendanceResult.validationDetails && (
+                <div className="text-xs space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <span>Security validation passed</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ),
         });
         setScanResult(`✓ Checked in to ${attendanceResult.eventTitle}`);
         onAttendanceLogged?.();
@@ -311,12 +322,13 @@ const AttendanceCheckIn = ({
         </DialogContent>
       </Dialog>
 
-      <QRScanner
+      <QRScannerFixed
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onScanSuccess={handleScanSuccess}
         title="Scan Event QR Code"
         description="Position the event QR code within the camera view"
+        preferredCamera="environment"
       />
     </>
   );

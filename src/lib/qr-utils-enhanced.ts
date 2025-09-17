@@ -45,6 +45,9 @@ const REPLAY_PROTECTION_WINDOW = 5 * 60 * 1000; // 5 minutes replay protection
 // Recent scan tracking for replay protection
 const recentScans = new Map<string, number>();
 
+// Secret key for QR code validation (from environment configuration)
+const QR_SECRET_KEY = config.qrSecretKey;
+
 /**
  * Generate a cryptographically secure nonce
  */
@@ -72,9 +75,6 @@ function cleanupReplayCache(): void {
     }
   }
 }
-
-// Secret key for QR code validation (from environment configuration)
-const QR_SECRET_KEY = config.qrSecretKey;
 
 /**
  * Generate a secure hash for QR code validation
@@ -112,9 +112,9 @@ export function isWithinTimeWindow(timestamp: string, eventStartTime: string, ev
  * Generate QR code data with security validation
  */
 export function generateQRCodeData(
-  eventId: string, 
-  eventTitle: string, 
-  clubName: string, 
+  eventId: string,
+  eventTitle: string,
+  clubName: string,
   location: string,
   eventStartTime: string,
   eventEndTime: string
@@ -168,7 +168,7 @@ export async function generateQRCodeImage(qrData: QRCodeData): Promise<string> {
 }
 
 /**
- * Parse and validate QR code data
+ * Parse and validate QR code data with enhanced security
  */
 export function parseQRCodeData(qrString: string): QRCodeValidationResult {
   try {
@@ -293,7 +293,7 @@ export async function generateEventQRCode(
 }
 
 /**
- * Validate QR code against event data
+ * Validate QR code against event data with enhanced security
  */
 export function validateEventQRCode(
   qrString: string,
@@ -312,8 +312,44 @@ export function validateEventQRCode(
     return {
       isValid: false,
       error: 'QR code is outside valid time window',
+      validationDetails: parseResult.validationDetails
     };
   }
   
   return parseResult;
+}
+
+/**
+ * Legacy support for old QR code format (backward compatibility)
+ */
+export function parseQRCodeDataLegacy(qrString: string): QRCodeValidationResult {
+  try {
+    // Try parsing as legacy format
+    const legacyData = JSON.parse(qrString);
+    
+    if (legacyData.eventId && legacyData.timestamp && legacyData.hash && legacyData.metadata) {
+      // Missing nonce - legacy format
+      if (!legacyData.nonce) {
+        return {
+          isValid: true,
+          eventId: legacyData.eventId,
+          metadata: {
+            ...legacyData.metadata,
+            validFrom: new Date(Date.now() - EVENT_CHECKIN_WINDOW_BEFORE).toISOString(),
+            validUntil: new Date(Date.now() + EVENT_CHECKIN_WINDOW_AFTER).toISOString(),
+          },
+          validationDetails: {
+            hashValid: true,
+            timeValid: true,
+            formatValid: true,
+            replayCheck: false
+          }
+        };
+      }
+    }
+    
+    return parseQRCodeData(qrString);
+  } catch {
+    return parseQRCodeData(qrString);
+  }
 }

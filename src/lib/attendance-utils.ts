@@ -1,8 +1,21 @@
 import { supabase } from '@/integrations/supabase/client';
-import { validateEventQRCode, QRCodeValidationResult } from './qr-utils';
+import { validateEventQRCode, QRCodeValidationResult, parseQRCodeData } from './qr-utils-enhanced';
 import { showNotification } from './notifications';
 
 export type AttendanceMethod = 'self-scan' | 'staff-scan' | 'manual';
+
+export interface AttendanceResult {
+  success: boolean;
+  error?: string;
+  eventTitle?: string;
+  attendanceId?: string;
+  validationDetails?: {
+    hashValid: boolean;
+    timeValid: boolean;
+    formatValid: boolean;
+    replayCheck: boolean;
+  };
+}
 
 export interface AttendanceLogEntry {
   id: string;
@@ -82,27 +95,32 @@ export async function logAttendance(
 }
 
 /**
- * Process QR code scan for attendance
+ * Process QR code scan for attendance with enhanced security
  */
 export async function processQRAttendance(
   qrString: string,
   scannerId: string,
   scannerRole: 'student' | 'club_admin' | 'college_admin'
-): Promise<{ success: boolean; error?: string; eventTitle?: string }> {
+): Promise<AttendanceResult> {
   try {
-    // First, parse the QR code
-    const qrValidation = validateEventQRCode(qrString, '', ''); // We'll validate time after getting event data
+    console.log('🔍 Processing QR attendance scan...');
+    
+    // First, parse the QR code with enhanced validation
+    const qrValidation = parseQRCodeData(qrString);
     
     if (!qrValidation.isValid) {
+      console.error('❌ QR validation failed:', qrValidation.error);
       return {
         success: false,
         error: qrValidation.error || 'Invalid QR code',
+        validationDetails: qrValidation.validationDetails
       };
     }
 
     const eventId = qrValidation.eventId!;
+    console.log('✅ QR parsed successfully for event:', eventId);
 
-    // Get event details for time validation
+    // Get event details for additional validation
     const { data: event, error: eventError } = await supabase
       .from('events')
       .select('title, start_time, end_time, clubs(name)')
@@ -110,22 +128,26 @@ export async function processQRAttendance(
       .single();
 
     if (eventError || !event) {
+      console.error('❌ Event not found:', eventError);
       return {
         success: false,
-        error: 'Event not found',
+        error: 'Event not found or has been deleted',
+        validationDetails: qrValidation.validationDetails
       };
     }
 
-    // Validate time window
-    const timeValidation = validateEventQRCode(qrString, event.start_time, event.end_time);
-    if (!timeValidation.isValid) {
+    // Additional time window validation against actual event times
+    const fullTimeValidation = validateEventQRCode(qrString, event.start_time, event.end_time);
+    if (!fullTimeValidation.isValid) {
+      console.error('❌ Time validation failed:', fullTimeValidation.error);
       return {
         success: false,
-        error: timeValidation.error || 'QR code is outside valid time window',
+        error: fullTimeValidation.error || 'QR code is outside valid time window',
+        validationDetails: fullTimeValidation.validationDetails
       };
     }
 
-    // Determine attendance method based on scanner
+    // Determine attendance method based on scanner role
     let method: AttendanceMethod;
     if (scannerRole === 'student') {
       method = 'self-scan';
@@ -133,18 +155,33 @@ export async function processQRAttendance(
       method = 'staff-scan';
     }
 
+    console.log('📝 Logging attendance with method:', method);
+
     // Log attendance
     const logResult = await logAttendance(eventId, scannerId, method);
+    
+    if (logResult.success) {
+      console.log('✅ Attendance logged successfully');
+    } else {
+      console.error('❌ Failed to log attendance:', logResult.error);
+    }
     
     return {
       ...logResult,
       eventTitle: event.title,
+      validationDetails: qrValidation.validationDetails
     };
   } catch (error: any) {
-    console.error('Error processing QR attendance:', error);
+    console.error('❌ Error processing QR attendance:', error);
     return {
       success: false,
       error: error.message || 'Failed to process attendance',
+      validationDetails: {
+        hashValid: false,
+        timeValid: false,
+        formatValid: false,
+        replayCheck: false
+      }
     };
   }
 }

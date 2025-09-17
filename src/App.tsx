@@ -12,6 +12,7 @@ import Clubs from "./pages/Clubs";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import EventsAnalytics from "./pages/EventsAnalytics";
+import QRTest from "./pages/QRTest";
 import ConfigSetup from "./components/ConfigSetup";
 import ProtectedRoute from "@/components/Layout/ProtectedRoute";
 
@@ -114,6 +115,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <Admin />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/qr-test"
+                element={
+                  <ProtectedRoute>
+                    <QRTest />
                   </ProtectedRoute>
                 }
               />
