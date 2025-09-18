@@ -15,6 +15,8 @@
     "supabase:reset": "npx supabase db reset"
   },
   "dependencies": {
+    "@fontsource-variable/geist-mono": "^5.2.7",
+    "@fontsource-variable/inter": "^5.2.8",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -52,10 +54,12 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^12.23.14",
     "html5-qrcode": "^2.3.8",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
+    "node-vibrant": "^4.0.3",
     "qr-scanner": "^1.4.2",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
@@ -64,7 +68,6 @@
     "react-hook-form": "^7.61.1",
     "react-qr-barcode-scanner": "^2.1.10",
     "react-qr-code": "^2.0.18",
-
     "react-resizable-panels": "^2.1.9",
     "react-router-dom": "^6.30.1",
     "react-webcam": "^7.2.0",

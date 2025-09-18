@@ -1,10 +1,9 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Users, Clock, Plus, BarChart3, QrCode, UserCheck, Pencil } from 'lucide-react';
+import { Plus, BarChart3, QrCode, UserCheck, Calendar } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import CreateEventDialog from '@/components/Events/CreateEventDialog';
@@ -13,7 +12,9 @@ import EventDetailsDialog from '@/components/Events/EventDetailsDialog';
 import TeamCreationDialog from '@/components/Events/TeamCreationDialog';
 import AttendanceDashboard from '@/components/Events/AttendanceDashboard';
 import AttendanceCheckIn from '@/components/Events/AttendanceCheckIn';
+import EventCard from '@/components/Events/EventCard';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 
 interface Event {
   id: string;
@@ -25,6 +26,9 @@ interface Event {
   capacity: number;
   is_team_event: boolean;
   club_id: string;
+  event_image_url?: string | null;
+  gradient_colors?: any;
+  gradient_css?: string | null;
   clubs: {
     name: string;
   };
@@ -211,117 +215,29 @@ const Events = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {events.map((event) => (
-            <Card key={event.id} className="hover:shadow-lg transition-shadow elevate-card">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{event.title}</CardTitle>
-                    <CardDescription className="mt-1">
-                      {event.clubs.name}
-                    </CardDescription>
-                  </div>
-                  <Badge variant={event.is_team_event ? 'secondary' : 'outline'}>
-                    {event.is_team_event ? 'Team' : 'Individual'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {event.description}
-                </p>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center text-muted-foreground">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {formatDate(event.start_time)}
-                  </div>
-                  
-                  <div className="flex items-center text-muted-foreground">
-                    <Clock className="h-4 w-4 mr-2" />
-                    {formatTime(event.start_time)} - {formatTime(event.end_time)}
-                  </div>
-                  
-                  <div className="flex items-center text-muted-foreground">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    {event.location}
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className={getAvailabilityColor(event.registrations.length, event.capacity)}>
-                      {event.registrations.length}/{event.capacity} registered
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {isRegistered(event) ? (
-                    <Button className="flex-1" size="sm" disabled>
-                      Registered
-                    </Button>
-                  ) : (
-                    <Button 
-                      className="flex-1" 
-                      size="sm"
-                      onClick={() => handleRegisterClick(event)}
-                    >
-                      Register
-                    </Button>
-                  )}
-                            
-                  {/* Attendance Check-in Button */}
-                  {isEventActive(event) && isRegistered(event) && (
-                    <Button 
-                      size="sm"
-                      onClick={() => {
-                        setSelectedEvent(event);
-                        setIsCheckInOpen(true);
-                      }}
-                    >
-                      <UserCheck className="h-4 w-4 mr-1" />
-                      Check-in
-                    </Button>
-                  )}
-                            
-                  {/* Management Buttons for Admins */}
-                  {canManageEvent(event) && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => navigate(`/events/${event.id}/analytics`)}
-                      >
-                        <BarChart3 className="h-4 w-4 mr-1" />
-                        Analytics
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          setSelectedEvent(event);
-                          setIsEditDialogOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    </>
-                  )}
-                            
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => {
-                      setSelectedEvent(event);
-                      setIsDetailsDialogOpen(true);
-                    }}
-                  >
-                    Details
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <EventCard
+              key={event.id}
+              event={event}
+              posterUrl={event.event_image_url}
+              onViewDetails={(event) => {
+                setSelectedEvent(event);
+                setIsDetailsDialogOpen(true);
+              }}
+              onEdit={(event) => {
+                setSelectedEvent(event);
+                setIsEditDialogOpen(true);
+              }}
+              onViewAnalytics={(event) => {
+                navigate(`/events/${event.id}/analytics`);
+              }}
+              onCheckIn={(event) => {
+                setSelectedEvent(event);
+                setIsCheckInOpen(true);
+              }}
+              canEdit={canManageEvent(event)}
+              canViewAnalytics={canManageEvent(event)}
+              canCheckIn={isEventActive(event) && isRegistered(event)}
+            />
           ))}
         </div>
 

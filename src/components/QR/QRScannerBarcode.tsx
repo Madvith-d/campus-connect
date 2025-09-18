@@ -290,3 +290,5 @@ const QRScannerBarcode = ({
 };
 
 export default QRScannerBarcode;
+
+

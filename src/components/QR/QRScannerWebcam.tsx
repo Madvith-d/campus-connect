@@ -388,3 +388,4 @@ const QRScannerWebcam = ({
 };
 
 export default QRScannerWebcam;
+
