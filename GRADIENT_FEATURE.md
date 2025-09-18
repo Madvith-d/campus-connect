@@ -146,3 +146,4 @@ The feature integrates seamlessly with the existing design system:
 - [ ] Multiple gradient style options
 - [ ] Batch processing for existing events
 - [ ] Gradient preview in event creation form
+

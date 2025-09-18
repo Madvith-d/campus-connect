@@ -112,10 +112,9 @@ const GradientDemo: React.FC = () => {
             className="hover:shadow-lg transition-all duration-300 ease-out elevate-card event-card-gradient"
             style={{
               background: gradientBackground || 'linear-gradient(135deg, hsl(222.2 47.4% 11.2% / 0.8), hsl(210 40% 96.1% / 0.8))',
-              backgroundBlendMode: 'multiply',
             }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/80 to-background/90 rounded-lg pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-background/40 via-background/30 to-background/40 rounded-lg pointer-events-none" />
             
             <CardHeader className="relative z-10">
               <div className="flex items-start justify-between">
@@ -221,3 +220,4 @@ const GradientDemo: React.FC = () => {
 };
 
 export default GradientDemo;
+

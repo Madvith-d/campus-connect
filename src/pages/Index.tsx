@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Calendar, Users, Building, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import EventsTimeline from '@/components/Events/EventsTimeline';
 
 interface DashboardStats {
   totalEvents: number;
@@ -198,8 +199,10 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* Recent Activity */}
+        {/* Timeline + Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <EventsTimeline />
+
           <Card>
             <CardHeader>
               <CardTitle>Recent Events</CardTitle>

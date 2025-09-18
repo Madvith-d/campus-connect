@@ -325,3 +325,4 @@ The upload should work when:
 - Storage bucket exists and is configured as public
 
 This error is blocking the complete implementation of the event gradient feature, which requires uploaded images to extract colors for gradient generation.
+

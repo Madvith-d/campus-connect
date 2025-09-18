@@ -125,3 +125,4 @@ Once setup is complete, you can:
 - Enjoy the enhanced visual appeal of your event cards!
 
 The feature is now fully functional! 🚀
+

@@ -78,3 +78,4 @@ export async function hasCachedGradientColors(eventId: string): Promise<boolean>
     return false;
   }
 }
+

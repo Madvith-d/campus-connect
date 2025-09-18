@@ -3,8 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Clock, BarChart3, QrCode, UserCheck, Pencil } from 'lucide-react';
-import { getGradientFromPoster, extractColorsFromImage, generateGradient } from '@/lib/color-extraction';
-import { saveGradientColors, loadGradientColors } from '@/lib/gradient-persistence';
 import { format } from 'date-fns';
 
 interface Event {
@@ -52,57 +50,8 @@ const EventCard: React.FC<EventCardProps> = ({
   canViewAnalytics = false,
   canCheckIn = false,
 }) => {
-  const [gradientBackground, setGradientBackground] = useState<string>('');
-  const [isLoadingGradient, setIsLoadingGradient] = useState(true);
-
-  useEffect(() => {
-    const loadGradient = async () => {
-      setIsLoadingGradient(true);
-      try {
-        // First, try to use cached gradient
-        if (event.gradient_css) {
-          setGradientBackground(event.gradient_css);
-          setIsLoadingGradient(false);
-          return;
-        }
-
-        // If no cached gradient, try to load from database
-        const { gradientCss } = await loadGradientColors(event.id);
-        if (gradientCss) {
-          setGradientBackground(gradientCss);
-          setIsLoadingGradient(false);
-          return;
-        }
-
-        // If no cached gradient exists, extract from image and save
-        const imageUrl = posterUrl || event.event_image_url;
-        if (imageUrl) {
-          const colors = await extractColorsFromImage(imageUrl);
-          const gradient = generateGradient(colors);
-          
-          // Save to database for future use
-          try {
-            await saveGradientColors(event.id, colors, gradient);
-          } catch (saveError) {
-            console.warn('Failed to save gradient colors:', saveError);
-          }
-          
-          setGradientBackground(gradient);
-        } else {
-          // No image available, use fallback
-          setGradientBackground('linear-gradient(135deg, hsl(222.2 47.4% 11.2% / 0.8), hsl(210 40% 96.1% / 0.8))');
-        }
-      } catch (error) {
-        console.warn('Failed to load gradient for event:', event.title, error);
-        // Set fallback gradient
-        setGradientBackground('linear-gradient(135deg, hsl(222.2 47.4% 11.2% / 0.8), hsl(210 40% 96.1% / 0.8))');
-      } finally {
-        setIsLoadingGradient(false);
-      }
-    };
-
-    loadGradient();
-  }, [posterUrl, event.event_image_url, event.id, event.gradient_css]);
+  const imageUrl = posterUrl || event.event_image_url || '';
+  const hasImage = Boolean(imageUrl);
 
   const formatDate = (dateString: string) => {
     try {
@@ -125,23 +74,38 @@ const EventCard: React.FC<EventCardProps> = ({
   return (
     <Card 
       className={`
-        hover:shadow-lg transition-all duration-300 ease-out elevate-card event-card-gradient
-        ${isLoadingGradient ? 'opacity-90' : ''}
+        hover:shadow-lg transition-all duration-300 ease-out elevate-card overflow-hidden
       `}
-      style={{
-        background: gradientBackground,
-        backgroundBlendMode: 'multiply',
-      }}
     >
-      {/* Gradient overlay for better text readability */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/80 to-background/90 rounded-lg pointer-events-none" />
+      {/* Poster or fallback banner */}
+      <div className="relative w-full h-40 md:h-48">
+        {hasImage ? (
+          <>
+            <img
+              src={imageUrl}
+              alt={`${event.title} poster`}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          </>
+        ) : (
+          <div className="w-full h-full bg-black flex items-end p-4">
+            <h3 className="text-white font-heading text-xl md:text-2xl tracking-tight">
+              {event.title}
+            </h3>
+          </div>
+        )}
+      </div>
       
-      <CardHeader className="relative z-10">
+      <CardHeader className="relative">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg text-foreground drop-shadow-sm">
-              {event.title}
-            </CardTitle>
+            {hasImage && (
+              <CardTitle className="text-lg text-foreground">
+                {event.title}
+              </CardTitle>
+            )}
             <CardDescription className="mt-1 text-foreground/80">
               {event.clubs.name}
             </CardDescription>

@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import CreateEventDialog from '@/components/Events/CreateEventDialog';
 import EditEventDialog from '@/components/Events/EditEventDialog';
-import EventDetailsDialog from '@/components/Events/EventDetailsDialog';
+// Event details now opens as a dedicated page; dialog import removed
 import TeamCreationDialog from '@/components/Events/TeamCreationDialog';
 import AttendanceDashboard from '@/components/Events/AttendanceDashboard';
 import AttendanceCheckIn from '@/components/Events/AttendanceCheckIn';
@@ -44,7 +44,7 @@ const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  // Details dialog no longer used; navigation is used instead
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [isAttendanceDashboardOpen, setIsAttendanceDashboardOpen] = useState(false);
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
@@ -76,10 +76,31 @@ const Events = () => {
           clubs(name),
           registrations(id, profile_id)
         `)
-        .order('start_time', { ascending: true });
+        // Fetch all events; we'll sort client-side to place upcoming first and completed last
+        ;
 
       if (error) throw error;
-      setEvents(data || []);
+      const now = Date.now();
+      const sorted = (data || []).slice().sort((a: any, b: any) => {
+        const aStart = new Date(a.start_time).getTime();
+        const bStart = new Date(b.start_time).getTime();
+        const aEnd = new Date(a.end_time).getTime();
+        const bEnd = new Date(b.end_time).getTime();
+
+        const aIsCompleted = aEnd < now;
+        const bIsCompleted = bEnd < now;
+
+        // Upcoming (or ongoing) first, completed last
+        if (aIsCompleted !== bIsCompleted) return aIsCompleted ? 1 : -1;
+
+        // If both upcoming/ongoing: sort by start time ascending (closest first)
+        if (!aIsCompleted && !bIsCompleted) return aStart - bStart;
+
+        // If both completed: sort by end time descending (most recently completed first)
+        return bEnd - aEnd;
+      });
+
+      setEvents(sorted as any);
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
@@ -220,8 +241,7 @@ const Events = () => {
               event={event}
               posterUrl={event.event_image_url}
               onViewDetails={(event) => {
-                setSelectedEvent(event);
-                setIsDetailsDialogOpen(true);
+                navigate(`/events/${event.id}`);
               }}
               onEdit={(event) => {
                 setSelectedEvent(event);
@@ -259,12 +279,7 @@ const Events = () => {
           onEventCreated={handleEventCreated}
         />
 
-        <EventDetailsDialog
-          event={selectedEvent}
-          isOpen={isDetailsDialogOpen}
-          onClose={() => setIsDetailsDialogOpen(false)}
-          onRegister={handleRegister}
-        />
+        {/* Details dialog removed in favor of route-based page */}
 
         <TeamCreationDialog
           eventId={selectedEvent?.id || ''}

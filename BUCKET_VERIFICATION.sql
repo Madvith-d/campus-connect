@@ -16,3 +16,4 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 5. List all available buckets
 SELECT id, name, public FROM storage.buckets ORDER BY created_at;
+
