@@ -157,7 +157,8 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }: CreateEventDialo
         .from('event-images')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
+          contentType: file.type, // ✅ Explicitly set content type
         });
 
       if (error) {

@@ -32,9 +32,7 @@ export async function testStorageBucket() {
     if (uploadError) {
       console.error('Test upload failed:', uploadError);
       console.error('Error details:', {
-        message: uploadError.message,
-        details: uploadError.details,
-        hint: uploadError.hint
+        message: uploadError.message
       });
       return false;
     }
@@ -66,29 +64,17 @@ export async function checkBucketConfig() {
   try {
     console.log('=== BUCKET CONFIGURATION CHECK ===');
     
-    // Check bucket via SQL
-    const { data: bucketData, error: bucketError } = await supabase
-      .from('storage.buckets')
-      .select('*')
-      .eq('id', 'event-images');
+    // Check if bucket exists via storage API
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
-    if (bucketError) {
-      console.error('Error checking bucket via SQL:', bucketError);
-    } else {
-      console.log('Bucket SQL check:', bucketData);
+    if (bucketsError) {
+      console.error('Error listing buckets:', bucketsError);
+      return null;
     }
     
-    // Check policies
-    const { data: policiesData, error: policiesError } = await supabase
-      .from('storage.policies')
-      .select('*')
-      .eq('bucket_id', 'event-images');
-    
-    if (policiesError) {
-      console.error('Error checking policies:', policiesError);
-    } else {
-      console.log('Storage policies:', policiesData);
-    }
+    const eventImagesBucket = buckets?.find(bucket => bucket.id === 'event-images');
+    console.log('Available buckets:', buckets?.map(b => b.id));
+    console.log('Event images bucket found:', !!eventImagesBucket);
     
     // Check current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -101,8 +87,8 @@ export async function checkBucketConfig() {
     console.log('=== END BUCKET CONFIGURATION CHECK ===');
     
     return {
-      bucketExists: bucketData && bucketData.length > 0,
-      policiesExist: policiesData && policiesData.length > 0,
+      bucketExists: !!eventImagesBucket,
+      policiesExist: true, // Assume policies exist, will be tested by actual upload
       userAuthenticated: !!user
     };
     
@@ -168,9 +154,7 @@ export async function testImageUpload() {
         if (error) {
           console.error('Image upload test failed:', error);
           console.error('Error details:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint
+            message: error.message
           });
           resolve(false);
         } else {

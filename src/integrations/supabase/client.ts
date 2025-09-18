@@ -30,27 +30,25 @@ export const supabase = createClient<Database>(
       autoRefreshToken: true,
       detectSessionInUrl: true,
       flowType: 'pkce'
-    },
-    global: {
-      headers: {
-        'Content-Type': 'application/json',
-      },
     }
+    // Removed global headers - they interfere with file uploads
+    // Files need their own content-type, not application/json
   }
 );
 
 // Test connection on import
 if (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY) {
   // Test connection asynchronously
-  supabase.from('profiles').select('count').limit(1)
-    .then(({ error }) => {
+  (async () => {
+    try {
+      const { error } = await supabase.from('profiles').select('count').limit(1);
       if (error) {
         console.error('Supabase connection test failed:', error);
       } else {
         console.log('✓ Supabase connection successful');
       }
-    })
-    .catch((error) => {
+    } catch (error) {
       console.error('Supabase connection error:', error);
-    });
+    }
+  })();
 }
