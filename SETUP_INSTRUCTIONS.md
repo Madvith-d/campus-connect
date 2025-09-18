@@ -57,7 +57,7 @@ ON CONFLICT (id) DO NOTHING;
 - **Target roles:** `public`
 - **USING expression:** `bucket_id = 'event-images'`
 
-**Policy 3: Update Images**
+**Policy 3: 12347**
 - **Name:** `Authenticated users can update event images`
 - **Operation:** `UPDATE`
 - **Target roles:** `authenticated`

@@ -151,15 +151,28 @@ const EventsAnalytics = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Analytics</h1>
-            {event && <p className="text-muted-foreground">{event.clubs?.name} • {event.title}</p>}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="flex items-center gap-2 text-xl sm:text-2xl"><BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" /> Analytics</h1>
+            {event && (
+              <p className="text-muted-foreground text-sm sm:text-base truncate">
+                {event.clubs?.name} • {event.title}
+              </p>
+            )}
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={exportCsv}><Download className="h-4 w-4 mr-2" />Export</Button>
-            <Button variant="outline" onClick={() => setQrOpen(true)}><QrCode className="h-4 w-4 mr-2" />QR</Button>
-            <Button onClick={() => setCheckInOpen(true)}><UserCheck className="h-4 w-4 mr-2" />Check-in</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={exportCsv}>
+              <Download className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
+              <QrCode className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">QR</span>
+            </Button>
+            <Button size="sm" onClick={() => setCheckInOpen(true)}>
+              <UserCheck className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Check-in</span>
+            </Button>
           </div>
         </div>
 
@@ -178,34 +191,55 @@ const EventsAnalytics = () => {
         {event && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{event.title}</span>
-                <Badge variant={event.is_team_event ? 'secondary' : 'outline'}>
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <span className="truncate">{event.title}</span>
+                <Badge variant={event.is_team_event ? 'secondary' : 'outline'} className="w-fit">
                   {event.is_team_event ? 'Team Event' : 'Individual Event'}
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center text-muted-foreground"><Calendar className="h-4 w-4 mr-2" />{new Date(event.start_time).toLocaleDateString()}</div>
-              <div className="flex items-center text-muted-foreground"><Clock className="h-4 w-4 mr-2" />{new Date(event.start_time).toLocaleTimeString()} - {new Date(event.end_time).toLocaleTimeString()}</div>
-              <div className="flex items-center text-muted-foreground"><MapPin className="h-4 w-4 mr-2" />{event.location}</div>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex items-center text-muted-foreground text-sm">
+                <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">{new Date(event.start_time).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center text-muted-foreground text-sm">
+                <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">{new Date(event.start_time).toLocaleTimeString()} - {new Date(event.end_time).toLocaleTimeString()}</span>
+              </div>
+              <div className="flex items-center text-muted-foreground text-sm sm:col-span-2 lg:col-span-1">
+                <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">{event.location}</span>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card>
-              <CardHeader><CardTitle>Total Registered</CardTitle></CardHeader>
-              <CardContent className="text-3xl font-semibold">{stats.totalRegistered}</CardContent>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Registered</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-2xl sm:text-3xl font-bold">{stats.totalRegistered}</div>
+              </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle>Total Attended</CardTitle></CardHeader>
-              <CardContent className="text-3xl font-semibold">{stats.totalAttended}</CardContent>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Attended</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-2xl sm:text-3xl font-bold">{stats.totalAttended}</div>
+              </CardContent>
             </Card>
-            <Card>
-              <CardHeader><CardTitle>Attendance Rate</CardTitle></CardHeader>
-              <CardContent className="text-3xl font-semibold">{stats.attendanceRate}%</CardContent>
+            <Card className="sm:col-span-2 lg:col-span-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-2xl sm:text-3xl font-bold">{stats.attendanceRate}%</div>
+              </CardContent>
             </Card>
           </div>
         )}
@@ -219,12 +253,12 @@ const EventsAnalytics = () => {
               ) : (
                 <div className="space-y-2">
                   {stats.recentAttendees.map((a: any) => (
-                    <div key={a.id} className="flex items-center justify-between border rounded-md px-3 py-2">
-                      <div>
-                        <div className="font-medium">{a.name} <span className="text-muted-foreground">({a.usn})</span></div>
+                    <div key={a.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between border rounded-md px-3 py-2 gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{a.name} <span className="text-muted-foreground">({a.usn})</span></div>
                         <div className="text-xs text-muted-foreground">{new Date(a.timestamp).toLocaleString()}</div>
                       </div>
-                      <Badge variant={a.method === 'self-scan' ? 'default' : a.method === 'staff-scan' ? 'secondary' : 'outline'}>
+                      <Badge variant={a.method === 'self-scan' ? 'default' : a.method === 'staff-scan' ? 'secondary' : 'outline'} className="w-fit">
                         {a.method}
                       </Badge>
                     </div>
@@ -246,19 +280,30 @@ const EventsAnalytics = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-muted-foreground">
-                        <th className="py-2 pr-4">Name</th>
-                        <th className="py-2 pr-4">USN</th>
-                        <th className="py-2 pr-4">Method</th>
-                        <th className="py-2 pr-4">Timestamp</th>
+                        <th className="py-2 pr-2 sm:pr-4">Name</th>
+                        <th className="py-2 pr-2 sm:pr-4 hidden sm:table-cell">USN</th>
+                        <th className="py-2 pr-2 sm:pr-4">Method</th>
+                        <th className="py-2 pr-2 sm:pr-4 hidden md:table-cell">Timestamp</th>
                       </tr>
                     </thead>
                     <tbody>
                       {attendees.map(a => (
                         <tr key={a.id} className="border-t">
-                          <td className="py-2 pr-4">{a.name}</td>
-                          <td className="py-2 pr-4">{a.usn}</td>
-                          <td className="py-2 pr-4"><Badge variant={a.method === 'self-scan' ? 'default' : a.method === 'staff-scan' ? 'secondary' : 'outline'}>{a.method}</Badge></td>
-                          <td className="py-2 pr-4">{new Date(a.timestamp).toLocaleString()}</td>
+                          <td className="py-2 pr-2 sm:pr-4">
+                            <div className="truncate max-w-[120px] sm:max-w-none">
+                              {a.name}
+                              <div className="text-xs text-muted-foreground sm:hidden">{a.usn}</div>
+                            </div>
+                          </td>
+                          <td className="py-2 pr-2 sm:pr-4 hidden sm:table-cell">{a.usn}</td>
+                          <td className="py-2 pr-2 sm:pr-4">
+                            <Badge variant={a.method === 'self-scan' ? 'default' : a.method === 'staff-scan' ? 'secondary' : 'outline'} className="text-xs">
+                              {a.method}
+                            </Badge>
+                          </td>
+                          <td className="py-2 pr-2 sm:pr-4 hidden md:table-cell">
+                            <div className="text-xs">{new Date(a.timestamp).toLocaleString()}</div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +26,7 @@ interface EditEventDialogProps {
   onClose: () => void;
   event: EventForEdit | null;
   onEventUpdated: () => void;
+  onEventDeleted?: () => void;
 }
 
 const toLocalInputValue = (isoString: string) => {
@@ -42,7 +44,7 @@ const fromLocalInputValue = (local: string) => {
   return local ? new Date(local).toISOString() : '';
 };
 
-const EditEventDialog = ({ isOpen, onClose, event, onEventUpdated }: EditEventDialogProps) => {
+const EditEventDialog = ({ isOpen, onClose, event, onEventUpdated, onEventDeleted }: EditEventDialogProps) => {
   const { toast } = useToast();
 
   const initial = useMemo(() => ({
@@ -57,6 +59,8 @@ const EditEventDialog = ({ isOpen, onClose, event, onEventUpdated }: EditEventDi
 
   const [form, setForm] = useState(initial);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     setForm(initial);
@@ -111,6 +115,29 @@ const EditEventDialog = ({ isOpen, onClose, event, onEventUpdated }: EditEventDi
     }
   };
 
+  const onDelete = async () => {
+    if (!event?.id) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      toast({ title: 'Event deleted successfully' });
+      onEventDeleted?.();
+      onClose();
+    } catch (e: any) {
+      toast({ title: 'Failed to delete event', description: e.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -157,9 +184,38 @@ const EditEventDialog = ({ isOpen, onClose, event, onEventUpdated }: EditEventDi
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-            <Button onClick={onSubmit} disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</Button>
+          <div className="flex justify-between pt-2">
+            <div>
+              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={saving || deleting}>
+                    Delete Event
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the event "{event?.title}" and remove all associated data including registrations and attendance records.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={onDelete} 
+                      disabled={deleting}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {deleting ? 'Deleting...' : 'Delete Event'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose} disabled={saving || deleting}>Cancel</Button>
+              <Button onClick={onSubmit} disabled={saving || deleting}>{saving ? 'Saving...' : 'Save changes'}</Button>
+            </div>
           </div>
         </div>
       </DialogContent>

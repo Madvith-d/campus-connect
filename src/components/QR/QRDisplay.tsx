@@ -77,7 +77,7 @@ const QRDisplay = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] w-[95vw] sm:w-full">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <QrCode className="h-5 w-5 mr-2" />

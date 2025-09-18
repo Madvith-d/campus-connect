@@ -326,3 +326,5 @@ The upload should work when:
 
 This error is blocking the complete implementation of the event gradient feature, which requires uploaded images to extract colors for gradient generation.
 
+
+

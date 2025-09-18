@@ -80,9 +80,9 @@ const EventDetails = () => {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Button variant="outline" onClick={() => history.back()}>
+          <Button variant="outline" size="sm" onClick={() => history.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            <span className="hidden sm:inline">Back</span>
           </Button>
         </div>
 
@@ -102,21 +102,21 @@ const EventDetails = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            <div className="relative w-full h-64 md:h-96 rounded-lg overflow-hidden">
+            <div className="relative w-full h-48 sm:h-64 md:h-96 rounded-lg overflow-hidden">
               {hasImage ? (
                 <img src={imageUrl} alt={`${event.title} poster`} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-black flex items-center justify-center">
-                  <h2 className="text-white font-heading text-2xl md:text-3xl tracking-tight">{event.title}</h2>
+                <div className="w-full h-full bg-black flex items-center justify-center p-4">
+                  <h2 className="text-white font-heading text-lg sm:text-2xl md:text-3xl tracking-tight text-center">{event.title}</h2>
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
-                <div>
-                  <h1 className="text-white text-2xl md:text-3xl font-semibold">{event.title}</h1>
-                  <p className="text-white/90">{event.clubs?.name}</p>
+              <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-white text-lg sm:text-2xl md:text-3xl font-semibold truncate">{event.title}</h1>
+                  <p className="text-white/90 text-sm sm:text-base truncate">{event.clubs?.name}</p>
                 </div>
-                <Badge variant={event.is_team_event ? 'secondary' : 'outline'} className="bg-white/90 text-foreground border-foreground/20">
+                <Badge variant={event.is_team_event ? 'secondary' : 'outline'} className="bg-white/90 text-foreground border-foreground/20 w-fit">
                   {event.is_team_event ? 'Team' : 'Individual'}
                 </Badge>
               </div>
@@ -131,20 +131,20 @@ const EventDetails = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center text-sm text-foreground/80">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {new Date(event.start_time).toLocaleString()}
+                      <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">{new Date(event.start_time).toLocaleString()}</span>
                     </div>
                     <div className="flex items-center text-sm text-foreground/80">
-                      <Clock className="h-4 w-4 mr-2" />
-                      {new Date(event.end_time).toLocaleString()}
+                      <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">{new Date(event.end_time).toLocaleString()}</span>
                     </div>
-                    <div className="flex items-center text-sm text-foreground/80">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      {event.location}
+                    <div className="flex items-center text-sm text-foreground/80 sm:col-span-2">
+                      <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">{event.location}</span>
                     </div>
-                    <div className="flex items-center text-sm text-foreground/80">
-                      <Users className="h-4 w-4 mr-2" />
-                      {event.registrations.length}/{event.capacity} registered
+                    <div className="flex items-center text-sm text-foreground/80 sm:col-span-2">
+                      <Users className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span>{event.registrations.length}/{event.capacity} registered</span>
                     </div>
                   </div>
                 </CardContent>

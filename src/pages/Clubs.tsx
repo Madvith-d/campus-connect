@@ -250,7 +250,7 @@ const Clubs = () => {
               Active Clubs
             </h2>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
               {approvedClubs.map((club) => (
               <Card key={club.id} className="hover:shadow-lg transition-shadow elevate-card">
                 <CardHeader>
@@ -282,7 +282,7 @@ const Clubs = () => {
                     </div>
                   </div>
                   
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex flex-wrap gap-2 pt-2">
                     {profile?.role === 'college_admin' ? (
                       <>
                         <ClubAdminAssignmentDialog 
@@ -290,7 +290,7 @@ const Clubs = () => {
                           clubName={club.name}
                           onAssignmentComplete={fetchClubs}
                         />
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
                           View Details
                         </Button>
                       </>
@@ -299,9 +299,11 @@ const Clubs = () => {
                         <Button 
                           size="sm" 
                           onClick={() => setIsCreateEventDialogOpen(true)}
+                          className="flex-1 sm:flex-none"
                         >
                           <Plus className="h-4 w-4 mr-2" />
-                          Create Event
+                          <span className="hidden sm:inline">Create Event</span>
+                          <span className="sm:hidden">Create</span>
                         </Button>
                         <JoinRequestsDialog 
                           clubId={club.id}
@@ -315,7 +317,7 @@ const Clubs = () => {
                         <Button variant="outline" size="sm" className="flex-1">
                           View Details
                         </Button>
-                        <Button variant="destructive" size="sm">
+                        <Button variant="destructive" size="sm" className="flex-1">
                           Leave Club
                         </Button>
                       </>
@@ -335,7 +337,7 @@ const Clubs = () => {
                             'Request to Join'
                           )}
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" className="flex-1">
                           Details
                         </Button>
                       </>

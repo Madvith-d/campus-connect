@@ -219,16 +219,19 @@ const Events = () => {
             {/* Quick Check-in Button */}
             <Button 
               variant="outline"
+              size="sm"
               onClick={() => setIsCheckInOpen(true)}
             >
               <QrCode className="h-4 w-4 mr-2" />
-              Quick Check-in
+              <span className="hidden sm:inline">Quick Check-in</span>
+              <span className="sm:hidden">Check-in</span>
             </Button>
             
             {(profile?.role === 'club_admin' || profile?.role === 'college_admin') && (
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Event
+                <span className="hidden sm:inline">Create Event</span>
+                <span className="sm:hidden">Create</span>
               </Button>
             )}
           </div>
@@ -316,6 +319,10 @@ const Events = () => {
           onClose={() => setIsEditDialogOpen(false)}
           event={selectedEvent}
           onEventUpdated={() => {
+            setIsEditDialogOpen(false);
+            fetchEvents();
+          }}
+          onEventDeleted={() => {
             setIsEditDialogOpen(false);
             fetchEvents();
           }}

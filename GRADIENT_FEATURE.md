@@ -147,3 +147,5 @@ The feature integrates seamlessly with the existing design system:
 - [ ] Batch processing for existing events
 - [ ] Gradient preview in event creation form
 
+
+

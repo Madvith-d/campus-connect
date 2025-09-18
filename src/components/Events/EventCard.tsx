@@ -78,7 +78,7 @@ const EventCard: React.FC<EventCardProps> = ({
       `}
     >
       {/* Poster or fallback banner */}
-      <div className="relative w-full h-40 md:h-48">
+      <div className="relative w-full h-32 sm:h-40 md:h-48">
         {hasImage ? (
           <>
             <img
@@ -90,8 +90,8 @@ const EventCard: React.FC<EventCardProps> = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           </>
         ) : (
-          <div className="w-full h-full bg-black flex items-end p-4">
-            <h3 className="text-white font-heading text-xl md:text-2xl tracking-tight">
+          <div className="w-full h-full bg-black flex items-end p-3 sm:p-4">
+            <h3 className="text-white font-heading text-lg sm:text-xl md:text-2xl tracking-tight">
               {event.title}
             </h3>
           </div>
@@ -153,14 +153,15 @@ const EventCard: React.FC<EventCardProps> = ({
           </div>
         </div>
         
-        <div className="flex flex-wrap gap-2 pt-2">
+        <div className="flex flex-wrap gap-1 sm:gap-2 pt-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onViewDetails?.(event)}
-            className="bg-white/90 text-foreground border-foreground/20 hover:bg-white/95"
+            className="bg-white/90 text-foreground border-foreground/20 hover:bg-white/95 flex-1 sm:flex-none"
           >
-            View Details
+            <span className="hidden sm:inline">View Details</span>
+            <span className="sm:hidden">Details</span>
           </Button>
           
           {canEdit && (
@@ -168,10 +169,10 @@ const EventCard: React.FC<EventCardProps> = ({
               variant="outline"
               size="sm"
               onClick={() => onEdit?.(event)}
-              className="bg-white/90 text-foreground border-foreground/20 hover:bg-white/95"
+              className="bg-white/90 text-foreground border-foreground/20 hover:bg-white/95 flex-1 sm:flex-none"
             >
               <Pencil className="h-4 w-4 mr-1" />
-              Edit
+              <span className="hidden sm:inline">Edit</span>
             </Button>
           )}
           
@@ -180,10 +181,10 @@ const EventCard: React.FC<EventCardProps> = ({
               variant="outline"
               size="sm"
               onClick={() => onViewAnalytics?.(event)}
-              className="bg-white/90 text-foreground border-foreground/20 hover:bg-white/95"
+              className="bg-white/90 text-foreground border-foreground/20 hover:bg-white/95 flex-1 sm:flex-none"
             >
               <BarChart3 className="h-4 w-4 mr-1" />
-              Analytics
+              <span className="hidden sm:inline">Analytics</span>
             </Button>
           )}
           
@@ -192,10 +193,11 @@ const EventCard: React.FC<EventCardProps> = ({
               variant="outline"
               size="sm"
               onClick={() => onCheckIn?.(event)}
-              className="bg-white/90 text-foreground border-foreground/20 hover:bg-white/95"
+              className="bg-white/90 text-foreground border-foreground/20 hover:bg-white/95 flex-1 sm:flex-none"
             >
               <UserCheck className="h-4 w-4 mr-1" />
-              Check In
+              <span className="hidden sm:inline">Check In</span>
+              <span className="sm:hidden">Check</span>
             </Button>
           )}
         </div>

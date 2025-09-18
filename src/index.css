@@ -175,4 +175,57 @@ All colors MUST be HSL.
       hsl(var(--background) / 0.95) 100%);
     backdrop-filter: blur(1px);
   }
+
+  /* Responsive utilities */
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+  
+  .desktop-only {
+    @apply hidden sm:block;
+  }
+  
+  .tablet-only {
+    @apply hidden sm:block lg:hidden;
+  }
+  
+  /* Mobile-first responsive text */
+  .responsive-text-xs {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .responsive-text-sm {
+    @apply text-sm sm:text-base;
+  }
+  
+  .responsive-text-base {
+    @apply text-base sm:text-lg;
+  }
+  
+  .responsive-text-lg {
+    @apply text-lg sm:text-xl;
+  }
+  
+  /* Responsive spacing */
+  .responsive-padding {
+    @apply p-4 sm:p-6;
+  }
+  
+  .responsive-margin {
+    @apply m-4 sm:m-6;
+  }
+  
+  /* Responsive grid utilities */
+  .responsive-grid-1 {
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+  }
+  
+  .responsive-grid-2 {
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-4;
+  }
+  
+  /* Mobile-friendly touch targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
 }
